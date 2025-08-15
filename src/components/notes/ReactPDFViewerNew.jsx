@@ -102,7 +102,8 @@ function ReactPDFViewerNew(props) {
 
   // HIGHLIGHT PLUGIN - uses percent coordinates and auto-repositions on zoom/rotate
   const renderHighlightTarget = (p) => {
-    if (tool !== "highlighter") return null;
+    // Show the selection popup when either the highlighter or the select tool is active.
+    if (tool !== "highlighter" && tool !== "select") return null;
     return (
       <div
         style={{
@@ -119,32 +120,52 @@ function ReactPDFViewerNew(props) {
           zIndex: 2000,
         }}
       >
-        <button
-          style={{
-            border: "none",
-            padding: "6px 10px",
-            borderRadius: 6,
-            cursor: "pointer",
-            background: color,
-            color: "white",
-            fontSize: "12px",
-          }}
-          onClick={() => {
-            // snapshot before creating a new highlight so it can be undone
-            pushUndoSnapshot();
-            const id = `hl-${Date.now()}`;
-            setHighlights((prev) => prev.concat([{ 
-              id, 
-              color, 
-              areas: p.highlightAreas, 
-              text: p.selectedText 
-            }]));
-            onTextSelection?.({ text: p.selectedText });
-            p.cancel();
-          }}
-        >
-          Highlight
-        </button>
+        {tool === "highlighter" && (
+          <button
+            style={{
+              border: "none",
+              padding: "6px 10px",
+              borderRadius: 6,
+              cursor: "pointer",
+              background: color,
+              color: "white",
+              fontSize: "12px",
+            }}
+            onClick={() => {
+              // snapshot before creating a new highlight so it can be undone
+              pushUndoSnapshot();
+              const id = `hl-${Date.now()}`;
+              setHighlights((prev) =>
+                prev.concat([{ id, color, areas: p.highlightAreas, text: p.selectedText }])
+              );
+              // Keep highlight creation separate from sending to chat
+              p.cancel();
+            }}
+          >
+            Highlight
+          </button>
+        )}
+
+        {tool === "select" && (
+          <button
+            style={{
+              border: "none",
+              padding: "6px 10px",
+              borderRadius: 6,
+              cursor: "pointer",
+              background: "#3b82f6",
+              color: "white",
+              fontSize: "12px",
+            }}
+            onClick={() => {
+              // Send selection to chat without creating a highlight
+              onTextSelection?.({ text: p.selectedText, pageNumber: p.pageIndex + 1, context: p.selectedText });
+              p.cancel();
+            }}
+          >
+            Send to Chat
+          </button>
+        )}
       </div>
     );
   };
@@ -385,56 +406,6 @@ function ReactPDFViewerNew(props) {
       </Worker>
     </div>
   );
-}
-
-// Inject basic styles
-if (typeof document !== "undefined") {
-  const id1 = "pdf-number-marker-styles";
-  if (!document.getElementById(id1)) {
-    const s = document.createElement("style");
-    s.id = id1;
-    s.textContent = `.pdf-number-marker{outline:none}`;
-    document.head.appendChild(s);
-  }
-
-  // Add selection control styles: when body has .edu-no-select, disable selection
-  // globally except inside the PDF viewer (container has .edu-pdf-viewer)
-  const id2 = "edu-selection-control";
-  if (!document.getElementById(id2)) {
-    const s2 = document.createElement("style");
-    s2.id = id2;
-    s2.textContent = `
-      /* Only apply when specifically in annotation mode */
-      body.edu-no-select * { 
-        user-select: none !important; 
-        -webkit-user-select: none !important;
-        -moz-user-select: none !important;
-        -ms-user-select: none !important;
-      }
-      /* Always allow selection inside PDF viewer */
-      body.edu-no-select .edu-pdf-viewer, 
-      body.edu-no-select .edu-pdf-viewer * { 
-        user-select: text !important; 
-        -webkit-user-select: text !important;
-        -moz-user-select: text !important;
-        -ms-user-select: text !important;
-      }
-      /* Default PDF viewer behavior */
-      .edu-pdf-viewer { 
-        -webkit-user-select: text; 
-        user-select: text; 
-      }
-      /* Prevent visual selection highlight outside PDF when in annotation mode */
-      body.edu-no-select::selection { background: transparent; }
-      body.edu-no-select *::selection { background: transparent; }
-      body.edu-no-select::-moz-selection { background: transparent; }
-      body.edu-no-select *::-moz-selection { background: transparent; }
-      /* But allow selection highlights inside PDF */
-      body.edu-no-select .edu-pdf-viewer::selection { background: #316AC5; }
-      body.edu-no-select .edu-pdf-viewer *::selection { background: #316AC5; }
-    `;
-    document.head.appendChild(s2);
-  }
 }
 
 export default ReactPDFViewerNew;
