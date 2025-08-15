@@ -375,7 +375,7 @@ function ReactPDFViewerNew(props) {
   }
 
   return (
-    <div className={`relative h-full ${className}`} ref={viewerRef}>
+  <div className={`relative h-full ${className} edu-pdf-viewer`} ref={viewerRef}>
       <Worker workerUrl={WORKER_URL}>
         <Viewer
           fileUrl={fileUrl}
@@ -395,6 +395,45 @@ if (typeof document !== "undefined") {
     s.id = id1;
     s.textContent = `.pdf-number-marker{outline:none}`;
     document.head.appendChild(s);
+  }
+
+  // Add selection control styles: when body has .edu-no-select, disable selection
+  // globally except inside the PDF viewer (container has .edu-pdf-viewer)
+  const id2 = "edu-selection-control";
+  if (!document.getElementById(id2)) {
+    const s2 = document.createElement("style");
+    s2.id = id2;
+    s2.textContent = `
+      /* Only apply when specifically in annotation mode */
+      body.edu-no-select * { 
+        user-select: none !important; 
+        -webkit-user-select: none !important;
+        -moz-user-select: none !important;
+        -ms-user-select: none !important;
+      }
+      /* Always allow selection inside PDF viewer */
+      body.edu-no-select .edu-pdf-viewer, 
+      body.edu-no-select .edu-pdf-viewer * { 
+        user-select: text !important; 
+        -webkit-user-select: text !important;
+        -moz-user-select: text !important;
+        -ms-user-select: text !important;
+      }
+      /* Default PDF viewer behavior */
+      .edu-pdf-viewer { 
+        -webkit-user-select: text; 
+        user-select: text; 
+      }
+      /* Prevent visual selection highlight outside PDF when in annotation mode */
+      body.edu-no-select::selection { background: transparent; }
+      body.edu-no-select *::selection { background: transparent; }
+      body.edu-no-select::-moz-selection { background: transparent; }
+      body.edu-no-select *::-moz-selection { background: transparent; }
+      /* But allow selection highlights inside PDF */
+      body.edu-no-select .edu-pdf-viewer::selection { background: #316AC5; }
+      body.edu-no-select .edu-pdf-viewer *::selection { background: #316AC5; }
+    `;
+    document.head.appendChild(s2);
   }
 }
 

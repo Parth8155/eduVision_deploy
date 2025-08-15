@@ -21,6 +21,31 @@ const ContentArea = ({
   const [studyModeEnabled, setStudyModeEnabled] = useState(false);
   const [viewModeEnabled, setViewModeEnabled] = useState(false);
 
+  // When a drawing/annotation tool is active, prevent text selection across the rest
+  // of the app (so other UI like chatbots won't get selected during drag). We allow
+  // selection inside the PDF viewer via a special viewer class.
+  useEffect(() => {
+    try {
+      // Only disable selection for annotation tools, NOT for reading tools
+      const isAnnotationTool = ["highlighter", "pen", "number", "text", "eraser"].includes(selectedTool);
+      
+      if (isAnnotationTool) {
+        console.log("🔒 Disabling text selection - tool:", selectedTool);
+        document.body.classList.add("edu-no-select");
+      } else {
+        console.log("🔓 Enabling text selection - tool:", selectedTool);
+        document.body.classList.remove("edu-no-select");
+      }
+    } catch (e) {
+      // ignore in non-browser environments
+    }
+    return () => {
+      try {
+        document.body.classList.remove("edu-no-select");
+      } catch (e) {}
+    };
+  }, [selectedTool]);
+
   // Editing command state - this replaces direct tool passing
   const [editingCommand, setEditingCommand] = useState(null);
 

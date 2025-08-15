@@ -7,7 +7,7 @@ import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import ErrorBoundary from "./components/ErrorBoundary";
 import { NotificationProvider } from "./components/NotificationProvider";
-import { ThemeProvider } from "./contexts/ThemeContext";
+import { ThemeProvider } from "./contexts/ThemeContext.jsx";
 import Index from "./pages/Index";
 import Dashboard from "./pages/Dashboard";
 import Upload from "./pages/Upload";
