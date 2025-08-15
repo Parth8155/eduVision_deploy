@@ -1,27 +1,16 @@
 import {
-  Info,
-  Edit3,
   Highlighter,
   Eraser,
-  Upload,
-  Square,
   Type,
   Undo,
   Redo,
   Trash2,
-  Circle,
-  MoreHorizontal,
   Hash,
-  Bookmark,
-  StickyNote,
   Eye,
   EyeOff,
-  Hand,
   MousePointer,
   Pen,
-  ArrowRight,
   Search,
-  Star,
 } from "lucide-react";
 
 const DrawingToolbar = ({
@@ -37,13 +26,9 @@ const DrawingToolbar = ({
   onRedo,
   canUndo = false,
   canRedo = false,
-  onCreateNumberAnnotation,
   onToggleStudyMode,
   studyModeEnabled = false,
-  onToggleViewMode,
-  viewModeEnabled = false,
   onBookmark,
-  onSearch,
   onAddNote,
 }) => {
   // Define tool categories for better organization

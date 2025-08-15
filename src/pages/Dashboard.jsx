@@ -575,63 +575,6 @@ const Dashboard = () => {
                 </div>
               </CardContent>
             </Card>
-
-            {/* Recent Achievements */}
-            <Card className="border-gray-200 dark:border-gray-700 dark:bg-gray-800">
-              <CardHeader>
-                <CardTitle className="text-lg text-gray-900 dark:text-white">
-                  Recent Achievements
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                {dashboardStats.totalNotes >= 7 && (
-                  <div className="flex items-center space-x-3 p-2 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg">
-                    <Star className="w-5 h-5 text-yellow-500" />
-                    <div>
-                      <p className="text-sm font-medium text-gray-900 dark:text-white">
-                        Study Streak
-                      </p>
-                      <p className="text-xs text-gray-500 dark:text-gray-400">
-                        7 notes uploaded!
-                      </p>
-                    </div>
-                  </div>
-                )}
-                {dashboardStats.mcqsGenerated >= 100 && (
-                  <div className="flex items-center space-x-3 p-2 bg-green-50 dark:bg-green-900/20 rounded-lg">
-                    <CheckCircle className="w-5 h-5 text-green-500" />
-                    <div>
-                      <p className="text-sm font-medium text-gray-900 dark:text-white">
-                        MCQ Master
-                      </p>
-                      <p className="text-xs text-gray-500 dark:text-gray-400">
-                        {dashboardStats.mcqsGenerated} MCQs generated
-                      </p>
-                    </div>
-                  </div>
-                )}
-                {dashboardStats.totalNotes >= 25 && (
-                  <div className="flex items-center space-x-3 p-2 bg-purple-50 dark:bg-purple-900/20 rounded-lg">
-                    <BookOpen className="w-5 h-5 text-purple-500" />
-                    <div>
-                      <p className="text-sm font-medium text-gray-900 dark:text-white">
-                        Note Collector
-                      </p>
-                      <p className="text-xs text-gray-500 dark:text-gray-400">
-                        {dashboardStats.totalNotes} notes processed
-                      </p>
-                    </div>
-                  </div>
-                )}
-                {dashboardStats.totalNotes === 0 && (
-                  <div className="text-center py-4">
-                    <p className="text-sm text-gray-500 dark:text-gray-400">
-                      Upload notes to start earning achievements!
-                    </p>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
           </div>
         </div>
       </div>
