@@ -37,6 +37,64 @@ function ReactPDFViewerNew(props) {
 
   const viewerRef = useRef(null);
 
+  // Undo / redo stacks (snapshots of highlights array)
+  const undoStackRef = useRef([]);
+  const redoStackRef = useRef([]);
+  const STACK_LIMIT = 100;
+
+  const pushUndoSnapshot = () => {
+    try {
+      const snap = JSON.parse(JSON.stringify(highlights));
+      undoStackRef.current.push(snap);
+      if (undoStackRef.current.length > STACK_LIMIT) undoStackRef.current.shift();
+      // new action clears redo
+      redoStackRef.current = [];
+      // expose availability to parent via window flags (ContentArea polls these)
+      try {
+        window.canUndoPDF = undoStackRef.current.length > 0;
+        window.canRedoPDF = redoStackRef.current.length > 0;
+      } catch (e) {}
+    } catch (e) {
+      // ignore
+    }
+  };
+
+  const undo = () => {
+    if (undoStackRef.current.length === 0) return;
+    const prev = undoStackRef.current.pop();
+    redoStackRef.current.push(JSON.parse(JSON.stringify(highlights)));
+    setHighlights(prev || []);
+    try {
+      window.canUndoPDF = undoStackRef.current.length > 0;
+      window.canRedoPDF = redoStackRef.current.length > 0;
+    } catch (e) {}
+  };
+
+  const redo = () => {
+    if (redoStackRef.current.length === 0) return;
+    const next = redoStackRef.current.pop();
+    undoStackRef.current.push(JSON.parse(JSON.stringify(highlights)));
+    setHighlights(next || []);
+    try {
+      window.canUndoPDF = undoStackRef.current.length > 0;
+      window.canRedoPDF = redoStackRef.current.length > 0;
+    } catch (e) {}
+  };
+
+  // Initialize global flags so parent polling sees correct state
+  useEffect(() => {
+    try {
+      window.canUndoPDF = undoStackRef.current.length > 0;
+      window.canRedoPDF = redoStackRef.current.length > 0;
+    } catch (e) {}
+    return () => {
+      try {
+        window.canUndoPDF = false;
+        window.canRedoPDF = false;
+      } catch (e) {}
+    };
+  }, []);
+
   // Plugins
   const defaultLayoutPluginInstance = defaultLayoutPlugin({
     sidebarTabs: (tabs) => [tabs[0]], // thumbnails only
@@ -72,6 +130,8 @@ function ReactPDFViewerNew(props) {
             fontSize: "12px",
           }}
           onClick={() => {
+            // snapshot before creating a new highlight so it can be undone
+            pushUndoSnapshot();
             const id = `hl-${Date.now()}`;
             setHighlights((prev) => prev.concat([{ 
               id, 
@@ -139,12 +199,19 @@ function ReactPDFViewerNew(props) {
         break;
       case "clear-all":
         console.log("🧹 Clearing all annotations");
-        // Clear plugin-managed highlights
+        // Snapshot current state then clear plugin-managed highlights so this can be undone
+        pushUndoSnapshot();
         setHighlights([]);
         // Clear number markers
         document
           .querySelectorAll(".pdf-number-marker")
           .forEach((el) => el.remove());
+        break;
+      case "undo":
+        undo();
+        break;
+      case "redo":
+        redo();
         break;
       default:
         console.log("❓ Unknown command:", action);
@@ -153,6 +220,28 @@ function ReactPDFViewerNew(props) {
     onCommandProcessed?.();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [editingCommand]);
+
+  // Keyboard shortcuts for undo / redo
+  useEffect(() => {
+    const onKey = (e) => {
+      const key = (e.key || '').toLowerCase();
+      const isMod = e.ctrlKey || e.metaKey;
+      if (!isMod) return;
+      if (key === 'z') {
+        e.preventDefault();
+        if (e.shiftKey) {
+          redo();
+        } else {
+          undo();
+        }
+      } else if (key === 'y') {
+        e.preventDefault();
+        redo();
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
 
   // Load PDF (supports authenticated API URLs)
   useEffect(() => {
