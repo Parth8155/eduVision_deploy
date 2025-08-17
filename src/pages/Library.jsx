@@ -27,6 +27,7 @@ import {
 } from "lucide-react";
 import Navigation from "@/components/Navigation";
 import notesService from "@/services/notesService";
+import studyToolsService from "@/services/studyToolsService";
 
 // Context Menu Component
 const ContextMenu = ({
@@ -38,6 +39,9 @@ const ContextMenu = ({
   onOpenSameTab,
   onToggleStar,
   onDelete,
+  onGenerateMCQ,
+  onGenerateSummary,
+  generatingContent,
 }) => {
   return (
     <div
@@ -78,6 +82,42 @@ const ContextMenu = ({
         />
         {item.starred ? "Remove from starred" : "Add to starred"}
       </button>
+      <hr className="my-1 border-gray-200 dark:border-gray-600" />
+      {!item.isStudyMaterial && (
+        <>
+          <button
+            className="w-full px-4 py-2 text-left hover:bg-gray-50 dark:hover:bg-gray-700 text-sm flex items-center dark:text-gray-200 disabled:opacity-50 disabled:cursor-not-allowed"
+            onClick={() => {
+              onGenerateMCQ(item);
+              onClose();
+            }}
+            disabled={generatingContent?.noteId === item._id && generatingContent?.type === 'mcq'}
+          >
+            {generatingContent?.noteId === item._id && generatingContent?.type === 'mcq' ? (
+              <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+            ) : (
+              <CheckCircle className="w-4 h-4 mr-2" />
+            )}
+            Generate MCQs
+          </button>
+          <button
+            className="w-full px-4 py-2 text-left hover:bg-gray-50 dark:hover:bg-gray-700 text-sm flex items-center dark:text-gray-200 disabled:opacity-50 disabled:cursor-not-allowed"
+            onClick={() => {
+              onGenerateSummary(item);
+              onClose();
+            }}
+            disabled={generatingContent?.noteId === item._id && generatingContent?.type === 'summary'}
+          >
+            {generatingContent?.noteId === item._id && generatingContent?.type === 'summary' ? (
+              <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+            ) : (
+              <BookOpen className="w-4 h-4 mr-2" />
+            )}
+            Generate Summary
+          </button>
+          <hr className="my-1 border-gray-200 dark:border-gray-600" />
+        </>
+      )}
       <button
         className="w-full px-4 py-2 text-left hover:bg-gray-50 dark:hover:bg-gray-700 text-sm text-red-600 dark:text-red-400"
         onClick={() => {
@@ -162,6 +202,7 @@ const Library = () => {
 
   // API State
   const [notes, setNotes] = useState([]);
+  const [studyMaterials, setStudyMaterials] = useState([]);
   const [loading, setLoading] = useState(true);
   const [pagination, setPagination] = useState({
     currentPage: 1,
@@ -173,6 +214,7 @@ const Library = () => {
   const [subjects, setSubjects] = useState([]);
   const [folders, setFolders] = useState([]);
   const [refreshing, setRefreshing] = useState(false);
+  const [generatingContent, setGeneratingContent] = useState(null);
 
   // Pagination and filters
   const [currentPage, setCurrentPage] = useState(1);
@@ -195,7 +237,7 @@ const Library = () => {
   const loadUserData = async () => {
     try {
       setLoading(true);
-      await Promise.all([loadNotes(), loadSubjects(), loadFolders()]);
+      await Promise.all([loadNotes(), loadStudyMaterials(), loadSubjects(), loadFolders()]);
     } catch (error) {
       console.error("Error loading user data:", error);
       toast.error("Failed to load library data");
@@ -224,6 +266,23 @@ const Library = () => {
     } catch (error) {
       console.error("Error loading notes:", error);
       toast.error("Failed to load notes");
+    }
+  };
+
+  // Load user's study materials
+  const loadStudyMaterials = async () => {
+    try {
+      const params = {
+        limit: 100, // Load more study materials
+        sortBy: "createdAt",
+        sortOrder: "desc",
+      };
+
+      const response = await studyToolsService.getUserStudyMaterials(params);
+      setStudyMaterials(response.data.studyMaterials || []);
+    } catch (error) {
+      console.error("Error loading study materials:", error);
+      // Don't show error toast for study materials as they're optional
     }
   };
 
@@ -288,23 +347,63 @@ const Library = () => {
   };
 
   // Filter notes for client-side filtering (starred, recent)
-  const getFilteredNotes = () => {
+  const getFilteredItems = () => {
+    // Combine notes and study materials
+    let allItems = [...notes];
+    
+    // Add study materials with proper formatting
+    const formattedStudyMaterials = studyMaterials.map(material => ({
+      ...material,
+      // Map study material fields to note-like fields for consistent display
+      lastAccessed: material.stats?.lastAccessed || material.updatedAt,
+      starred: material.isStarred,
+      pages: material.metadata?.questionCount || 1,
+      views: material.stats?.views || 0,
+      accuracy: material.stats?.averageScore || null,
+      generatedItems: {
+        mcqs: material.type === 'mcq' ? material.metadata?.questionCount : 0,
+        questions: material.type === 'practice' ? material.metadata?.questionCount : 0,
+      },
+      status: material.status === 'active' ? 'completed' : 'processing',
+      isStudyMaterial: true, // Flag to distinguish from regular notes
+    }));
+    
+    allItems = [...allItems, ...formattedStudyMaterials];
+
+    // Apply filters
     if (selectedFilter === "starred") {
-      return notes.filter((note) => note.starred);
+      return allItems.filter((item) => item.starred);
     }
     if (selectedFilter === "recent") {
       const threeDaysAgo = new Date();
       threeDaysAgo.setDate(threeDaysAgo.getDate() - 3);
-      return notes.filter((note) => new Date(note.lastAccessed) > threeDaysAgo);
+      return allItems.filter((item) => new Date(item.lastAccessed) > threeDaysAgo);
     }
-    return notes;
+    if (selectedFilter === "mcq") {
+      return allItems.filter((item) => item.type === "mcq");
+    }
+    if (selectedFilter === "summary") {
+      return allItems.filter((item) => item.type === "summary");
+    }
+    if (selectedFilter === "practice") {
+      return allItems.filter((item) => item.type === "practice");
+    }
+    if (selectedFilter === "notes") {
+      return allItems.filter((item) => item.type === "notes" || !item.isStudyMaterial);
+    }
+    
+    return allItems;
   };
 
-  const filteredNotes = getFilteredNotes();
+  const filteredItems = getFilteredItems();
 
   // Handle item click (open in new tab by default)
   const handleItemClick = (item) => {
-    handleOpenNewTab(item);
+    if (item.isStudyMaterial) {
+      handleOpenStudyMaterial(item);
+    } else {
+      handleOpenNewTab(item);
+    }
   };
 
   const handleItemRightClick = (e, item) => {
@@ -313,6 +412,19 @@ const Library = () => {
       item,
       x: e.clientX,
       y: e.clientY,
+    });
+  };
+
+  const handleOpenStudyMaterial = (item) => {
+    // Update stats (increment view count)
+    studyToolsService.getStudyMaterialById(item._id);
+    
+    // Navigate to StudyTools page with specific study material
+    navigate('/study-tools', {
+      state: {
+        activeTab: item.type,
+        studyMaterialId: item._id
+      }
     });
   };
 
@@ -348,33 +460,139 @@ const Library = () => {
   // Toggle star status
   const handleToggleStar = async (item) => {
     try {
-      await notesService.toggleStar(item._id, !item.starred);
-      setNotes((prev) =>
-        prev.map((note) =>
-          note._id === item._id ? { ...note, starred: !note.starred } : note
-        )
-      );
-      toast.success(item.starred ? "Removed from starred" : "Added to starred");
+      if (item.isStudyMaterial) {
+        // Handle study material star toggle
+        await studyToolsService.toggleStar(item._id);
+        setStudyMaterials((prev) =>
+          prev.map((material) =>
+            material._id === item._id 
+              ? { ...material, isStarred: !material.isStarred } 
+              : material
+          )
+        );
+        toast.success(item.starred ? "Removed from starred" : "Added to starred");
+      } else {
+        // Handle regular note star toggle
+        await notesService.toggleStar(item._id, !item.starred);
+        setNotes((prev) =>
+          prev.map((note) =>
+            note._id === item._id ? { ...note, starred: !note.starred } : note
+          )
+        );
+        toast.success(item.starred ? "Removed from starred" : "Added to starred");
+      }
     } catch (error) {
       console.error("Error toggling star:", error);
       toast.error("Failed to update star status");
     }
   };
 
-  // Delete note
+  // Delete note or study material
   const handleDeleteNote = async (item) => {
     if (!window.confirm(`Are you sure you want to delete "${item.title}"?`)) {
       return;
     }
     try {
-      await notesService.deleteNote(item._id);
-      setNotes((prev) => prev.filter((note) => note._id !== item._id));
-      toast.success("Note deleted successfully");
-      loadSubjects();
-      loadFolders();
+      if (item.isStudyMaterial) {
+        // Delete study material
+        await studyToolsService.deleteStudyMaterial(item._id);
+        setStudyMaterials((prev) => prev.filter((material) => material._id !== item._id));
+        toast.success("Study material deleted successfully");
+      } else {
+        // Delete regular note
+        await notesService.deleteNote(item._id);
+        setNotes((prev) => prev.filter((note) => note._id !== item._id));
+        toast.success("Note deleted successfully");
+        loadSubjects();
+        loadFolders();
+      }
     } catch (error) {
-      console.error("Error deleting note:", error);
-      toast.error("Failed to delete note");
+      console.error("Error deleting item:", error);
+      toast.error("Failed to delete item");
+    }
+  };
+
+  // Generate MCQs for a note
+  const handleGenerateMCQ = async (item) => {
+    setGeneratingContent({ noteId: item._id, type: 'mcq' });
+    try {
+      toast.info("Generating MCQs... This may take a moment.");
+      
+      // Create and save study material in database
+      const response = await studyToolsService.generateMCQ(item._id, {
+        count: 10,
+        difficulty: 'medium'
+      });
+      
+      if (response.success && response.data.studyMaterial) {
+        const studyMaterial = response.data.studyMaterial;
+        
+        // Add to study materials list
+        setStudyMaterials(prev => [studyMaterial, ...prev]);
+        
+        // Navigate to StudyTools page with the study material
+        navigate('/study-tools', { 
+          state: { 
+            activeTab: 'mcq',
+            studyMaterialId: studyMaterial._id
+          }
+        });
+        
+        toast.success(`Generated ${studyMaterial.metadata.questionCount} MCQs for ${item.title}`);
+        
+        // Reload subjects and folders to update counts
+        loadSubjects();
+        loadFolders();
+      } else {
+        toast.error("Failed to generate MCQs. Please try again.");
+      }
+    } catch (error) {
+      console.error("Error generating MCQs:", error);
+      toast.error("Failed to generate MCQs. Please try again later.");
+    } finally {
+      setGeneratingContent(null);
+    }
+  };
+
+  // Generate Summary for a note
+  const handleGenerateSummary = async (item) => {
+    setGeneratingContent({ noteId: item._id, type: 'summary' });
+    try {
+      toast.info("Generating summary... This may take a moment.");
+      
+      // Create and save study material in database
+      const response = await studyToolsService.generateSummary(item._id, {
+        length: 'medium',
+        format: 'structured'
+      });
+      
+      if (response.success && response.data.studyMaterial) {
+        const studyMaterial = response.data.studyMaterial;
+        
+        // Add to study materials list
+        setStudyMaterials(prev => [studyMaterial, ...prev]);
+        
+        // Navigate to StudyTools page with the study material
+        navigate('/study-tools', { 
+          state: { 
+            activeTab: 'summaries',
+            studyMaterialId: studyMaterial._id
+          }
+        });
+        
+        toast.success(`Generated summary for ${item.title}`);
+        
+        // Reload subjects and folders to update counts
+        loadSubjects();
+        loadFolders();
+      } else {
+        toast.error("Failed to generate summary. Please try again.");
+      }
+    } catch (error) {
+      console.error("Error generating summary:", error);
+      toast.error("Failed to generate summary. Please try again later.");
+    } finally {
+      setGeneratingContent(null);
     }
   };
 
@@ -387,18 +605,21 @@ const Library = () => {
 
   // Calculate filter counts
   const getFilterCounts = () => {
+    const allItems = [...notes, ...studyMaterials];
+    
     return {
-      all: pagination.totalNotes,
-      starred: notes.filter((note) => note.starred).length,
-      recent: notes.filter((note) => {
+      all: pagination.totalNotes + studyMaterials.length,
+      starred: allItems.filter((item) => item.starred || item.isStarred).length,
+      recent: allItems.filter((item) => {
         const threeDaysAgo = new Date();
         threeDaysAgo.setDate(threeDaysAgo.getDate() - 3);
-        return new Date(note.lastAccessed) > threeDaysAgo;
+        const lastAccessed = item.lastAccessed || item.stats?.lastAccessed || item.updatedAt;
+        return new Date(lastAccessed) > threeDaysAgo;
       }).length,
-      notes: notes.filter((note) => note.type === "notes").length,
-      summary: notes.filter((note) => note.type === "summary").length,
-      mcq: notes.filter((note) => note.type === "mcq").length,
-      practice: notes.filter((note) => note.type === "practice").length,
+      notes: notes.filter((note) => note.type === "notes" || !note.type).length,
+      summary: [...notes.filter((note) => note.type === "summary"), ...studyMaterials.filter((material) => material.type === "summary")].length,
+      mcq: [...notes.filter((note) => note.type === "mcq"), ...studyMaterials.filter((material) => material.type === "mcq")].length,
+      practice: [...notes.filter((note) => note.type === "practice"), ...studyMaterials.filter((material) => material.type === "practice")].length,
     };
   };
 
@@ -697,7 +918,7 @@ const Library = () => {
           <div className="lg:col-span-3">
             <div className="mb-4 flex items-center justify-between">
               <p className="text-sm text-gray-600 dark:text-gray-400">
-                Showing {filteredNotes.length} of {pagination.totalNotes} items
+                Showing {filteredItems.length} of {pagination.totalNotes + studyMaterials.length} items
               </p>
               <div className="flex items-center space-x-2">
                 <Button variant="outline" size="sm">
@@ -712,7 +933,7 @@ const Library = () => {
             </div>
 
             {/* Items Grid/List */}
-            {filteredNotes.length > 0 ? (
+            {filteredItems.length > 0 ? (
               <>
                 <div
                   className={
@@ -721,7 +942,7 @@ const Library = () => {
                       : "space-y-4"
                   }
                 >
-                  {filteredNotes.map((item) => {
+                  {filteredItems.map((item) => {
                     const TypeIcon = getTypeIcon(item.type);
 
                     return (
@@ -744,9 +965,21 @@ const Library = () => {
                                   </Badge>
                                 </div>
                                 <div className="flex items-center space-x-1">
-                                  {item.starred && (
-                                    <Star className="w-4 h-4 text-yellow-500 fill-current" />
-                                  )}
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleToggleStar(item);
+                                    }}
+                                    className="p-1"
+                                  >
+                                    <Star className={`w-4 h-4 ${
+                                      item.starred 
+                                        ? 'text-yellow-500 fill-current' 
+                                        : 'text-gray-400'
+                                    }`} />
+                                  </Button>
                                   <Button
                                     variant="ghost"
                                     size="sm"
@@ -827,9 +1060,21 @@ const Library = () => {
                                   <h3 className="font-semibold text-gray-900 dark:text-white truncate">
                                     {item.title}
                                   </h3>
-                                  {item.starred && (
-                                    <Star className="w-4 h-4 text-yellow-500 fill-current" />
-                                  )}
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleToggleStar(item);
+                                    }}
+                                    className="p-1"
+                                  >
+                                    <Star className={`w-4 h-4 ${
+                                      item.starred 
+                                        ? 'text-yellow-500 fill-current' 
+                                        : 'text-gray-400'
+                                    }`} />
+                                  </Button>
                                 </div>
                                 <div className="flex items-center space-x-2 mb-1">
                                   <Badge
@@ -948,6 +1193,9 @@ const Library = () => {
           onOpenSameTab={handleOpenSameTab}
           onToggleStar={handleToggleStar}
           onDelete={handleDeleteNote}
+          onGenerateMCQ={handleGenerateMCQ}
+          onGenerateSummary={handleGenerateSummary}
+          generatingContent={generatingContent}
         />
       )}
     </div>
