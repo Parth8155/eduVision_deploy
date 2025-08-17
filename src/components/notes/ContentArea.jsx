@@ -49,6 +49,15 @@ const ContentArea = ({
   // Editing command state - this replaces direct tool passing
   const [editingCommand, setEditingCommand] = useState(null);
 
+  // Debug: trace selectedTool and editingCommand changes
+  useEffect(() => {
+    console.log("ContentArea.selectedTool =>", selectedTool);
+  }, [selectedTool]);
+
+  useEffect(() => {
+    console.log("ContentArea.editingCommand =>", editingCommand);
+  }, [editingCommand]);
+
   const handleToolClick = (toolId) => {
     // Handle special actions
     if (toolId === "clear-all") {

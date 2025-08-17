@@ -34,10 +34,7 @@ const buttonVariants = cva(
 );
 
 const Button = React.forwardRef(
-  (
-    { className, variant, size, asChild = false, onClick, ...props },
-    ref
-  ) => {
+  ({ className, variant, size, asChild = false, onClick, ...props }, ref) => {
     const Comp = asChild ? Slot : "button";
 
     const handleClick = (event) => {

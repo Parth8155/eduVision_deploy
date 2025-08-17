@@ -5,6 +5,7 @@ import { highlightPlugin, Trigger } from "@react-pdf-viewer/highlight";
 import "@react-pdf-viewer/core/lib/styles/index.css";
 import "@react-pdf-viewer/default-layout/lib/styles/index.css";
 import "@react-pdf-viewer/highlight/lib/styles/index.css";
+import "./pdf-viewer-enhanced.css";
 
 // Worker URL pinned to pdfjs-dist 3.11.174 for compatibility
 const WORKER_URL =
@@ -135,9 +136,13 @@ function ReactPDFViewerNew(props) {
               // snapshot before creating a new highlight so it can be undone
               pushUndoSnapshot();
               const id = `hl-${Date.now()}`;
-              setHighlights((prev) =>
-                prev.concat([{ id, color, areas: p.highlightAreas, text: p.selectedText }])
-              );
+              const newHighlight = { id, color, areas: p.highlightAreas, text: p.selectedText };
+              console.log("✨ Creating highlight:", newHighlight);
+              setHighlights((prev) => {
+                const updated = prev.concat([newHighlight]);
+                console.log("📝 Updated highlights array:", updated.length, "items");
+                return updated;
+              });
               // Keep highlight creation separate from sending to chat
               p.cancel();
             }}
@@ -170,12 +175,12 @@ function ReactPDFViewerNew(props) {
     );
   };
 
-  const renderHighlights = (p) => (
+  const renderHighlights = (p) => {
+    return (
     <>
-      {highlights.map((h) =>
-        h.areas
-          .filter((a) => a.pageIndex === p.pageIndex)
-          .map((a, i) => (
+      {highlights.map((h) => {
+        const pageHighlights = h.areas.filter((a) => a.pageIndex === p.pageIndex);
+        return pageHighlights.map((a, i) => (
             <div
               key={`${h.id}-${i}`}
               style={{
@@ -184,13 +189,59 @@ function ReactPDFViewerNew(props) {
                 opacity: 0.35,
                 borderRadius: 2,
                 mixBlendMode: "multiply",
-                pointerEvents: "none",
+                pointerEvents: tool === "eraser" ? "auto" : "none",
+                cursor: tool === "eraser" ? "crosshair" : "default",
+                transition: "opacity 0.2s ease, background-color 0.2s ease",
+                zIndex: 1201, // sit above PDF text layer
               }}
+              className={tool === "eraser" ? "pdf-highlight-erasable" : ""}
+              title={tool === "eraser" ? "Click to erase this highlight" : ""}
+              data-debug={`tool:${tool},erasable:${tool === "eraser"}`}
+              onMouseDown={
+                tool === "eraser"
+                  ? (e) => {
+                      // Prevent PDF text layer from stealing pointer events
+                      e.preventDefault();
+                      e.stopPropagation();
+                    }
+                  : undefined
+              }
+              onMouseEnter={
+                tool === "eraser"
+                  ? (e) => {
+                      e.target.style.opacity = "0.6";
+                      e.target.style.background = "#ff4444";
+                      e.target.style.cursor = "crosshair";
+                    }
+                  : undefined
+              }
+              onMouseLeave={
+                tool === "eraser"
+                  ? (e) => {
+                      e.target.style.opacity = "0.35";
+                      e.target.style.background = h.color;
+                    }
+                  : undefined
+              }
+              onClick={
+                tool === "eraser"
+                  ? (e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      // Snapshot current state before removing highlight
+                      pushUndoSnapshot();
+                      // Remove the highlight
+                      setHighlights((prev) => prev.filter((highlight) => highlight.id !== h.id));
+                    }
+                  : undefined
+              }
             />
           ))
+        }
       )}
     </>
-  );
+  )
+  };
 
   const highlightPluginInstance = highlightPlugin({
     trigger: Trigger.TextSelection,
@@ -198,28 +249,29 @@ function ReactPDFViewerNew(props) {
     renderHighlights,
   });
 
-  // Sync external defaults
-  useEffect(() => setTool(currentTool), [currentTool]);
+  // Sync external defaults (only when parent prop changes)
+  useEffect(() => {
+    setTool(currentTool);
+    // intentionally do NOT depend on highlights so erasing/highlight changes
+    // don't force the tool back to the prop default
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentTool]);
   useEffect(() => setColor(currentColor), [currentColor]);
 
   // Apply commands from toolbar
   useEffect(() => {
     if (!editingCommand) return;
-    console.log("🎛️ PDF Viewer received command:", editingCommand);
     const { action, tool: cmdTool, color: cmdColor } = editingCommand;
     switch (action) {
       case "activate-tool":
-        console.log("🔧 Activating tool:", cmdTool, "with color:", cmdColor);
         if (cmdTool) setTool(cmdTool);
         if (cmdColor) setColor(cmdColor);
         break;
       case "change-color":
       case "change-highlighter-color":
-        console.log("🎨 Changing color to:", cmdColor);
         if (cmdColor) setColor(cmdColor);
         break;
       case "clear-all":
-        console.log("🧹 Clearing all annotations");
         // Snapshot current state then clear plugin-managed highlights so this can be undone
         pushUndoSnapshot();
         setHighlights([]);
@@ -317,11 +369,23 @@ function ReactPDFViewerNew(props) {
     [onLoadSuccess]
   );
 
-  // Number annotation placement
+  // Number annotation placement and eraser handling
   useEffect(() => {
     const el = viewerRef.current;
     if (!el) return;
+
     const onClick = (e) => {
+      // Handle number marker erasing
+      if (tool === "eraser" && e.target.classList.contains("pdf-number-marker")) {
+        console.log("🗑️ Erasing number marker");
+        e.preventDefault();
+        e.stopPropagation();
+        pushUndoSnapshot();
+        e.target.remove();
+        return;
+      }
+
+      // Handle number marker creation
       if (tool !== "number") return;
       let target = e.target;
       while (
@@ -360,15 +424,37 @@ function ReactPDFViewerNew(props) {
                 box-shadow: 0 1px 3px rgba(0,0,0,0.3);
                 z-index: 1200;
                 user-select: none;
-                pointer-events: none;
+                pointer-events: auto;
+                cursor: pointer;
+                transition: background-color 0.2s ease;
             `;
+      
       const computed = getComputedStyle(pageEl);
       if (computed.position === "static") pageEl.style.position = "relative";
       pageEl.appendChild(marker);
       onCreateNumberAnnotation?.(number, { x, y, pageNumber });
     };
+
+    const onMouseMove = (e) => {
+      // Update marker hover states based on current tool
+      if (e.target.classList.contains("pdf-number-marker")) {
+        if (tool === "eraser") {
+          e.target.style.backgroundColor = "#ff4444";
+          e.target.style.cursor = "crosshair";
+        } else {
+          e.target.style.backgroundColor = "#111";
+          e.target.style.cursor = "pointer";
+        }
+      }
+    };
+
     el.addEventListener("click", onClick);
-    return () => el.removeEventListener("click", onClick);
+    el.addEventListener("mouseover", onMouseMove);
+    
+    return () => {
+      el.removeEventListener("click", onClick);
+      el.removeEventListener("mouseover", onMouseMove);
+    };
   }, [tool, onCreateNumberAnnotation]);
 
   if (!pdfUrl) {
@@ -396,7 +482,10 @@ function ReactPDFViewerNew(props) {
   }
 
   return (
-  <div className={`relative h-full ${className} edu-pdf-viewer`} ref={viewerRef}>
+  <div className={`relative h-full ${className} edu-pdf-viewer ${
+    tool === "eraser" ? "eraser-active" : 
+    tool === "highlighter" ? "highlighter-active" : ""
+  }`} ref={viewerRef}>
       <Worker workerUrl={WORKER_URL}>
         <Viewer
           fileUrl={fileUrl}

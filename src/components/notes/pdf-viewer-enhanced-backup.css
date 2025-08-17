@@ -256,25 +256,18 @@
     }
 }
 
-/* Highlighter tool cursor: show text-selection (I-beam) to indicate text selection/highlighting.
-   Use standard cursors for reliability across platforms. */
-.highlighter-active,
-.highlighter-active .rpv-core__viewer,
-.highlighter-active .rpv-core__page,
-.highlighter-active .rpv-core__text-layer-text {
-    cursor: text !important;
+/* Highlighter tool cursor */
+.highlighter-active {
+    cursor: url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjQiIGhlaWdodD0iMjQiIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHBhdGggZD0iTTMgMThoMThhLjc1Ljc1IDAgMCAwIC43NS0uNzVWMTBhLjc1Ljc1IDAgMCAwLS43NS0uNzVIM2EuNzUuNzUgMCAwIDAtLjc1Ljc1djcuMjVBLjc1Ljc1IDAgMCAwIDMgMThaIiBmaWxsPSIjRkZGRjAwIiBzdHJva2U9IiMwMDAiIHN0cm9rZS13aWR0aD0iMSIvPgo8L3N2Zz4K') 12 12, crosshair !important;
 }
 
 .highlighter-active * {
     cursor: inherit !important;
 }
 
-/* Eraser tool cursor: use crosshair for precise erase targeting */
-.eraser-active,
-.eraser-active .rpv-core__viewer,
-.eraser-active .rpv-core__page,
-.eraser-active .pdf-highlight-erasable {
-    cursor: crosshair !important;
+/* Eraser tool cursor */
+.eraser-active {
+    cursor: url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjQiIGhlaWdodD0iMjQiIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHBhdGggZD0ibTcgMjEtNC4zLTQuMzAyYS44NDMuODQzIDAgMCAxIDAtMS4xOTRsOC43NTYtOC43NTdhLjg0My44NDMgMCAwIDEgMS4xOTQgMGw0LjU5NyA0LjU5N2EuODQzLjg0MyAwIDAgMS0wIDEuMTk0bC04Ljc1NSA4Ljc1N2EuODQzLjg0MyAwIDAgMS0xLjE5NCAwIiBmaWxsPSIjRkY0NDQ0IiBzdHJva2U9IiMwMDAiIHN0cm9rZS13aWR0aD0iMSIvPgo8L3N2Zz4K') 12 12, crosshair !important;
 }
 
 .eraser-active * {
@@ -283,21 +276,13 @@
 
 /* Enhanced erasable elements when eraser is active */
 .pdf-highlight-erasable {
-    /* Use standard crosshair cursor instead of deriving from icon SVG */
-    cursor: crosshair !important;
+    cursor: url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjQiIGhlaWdodD0iMjQiIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHBhdGggZD0ibTcgMjEtNC4zLTQuMzAyYS44NDMuODQzIDAgMCAxIDAtMS4xOTRsOC43NTYtOC43NTdhLjg0My44NDMgMCAwIDEgMS4xOTQgMGw0LjU5NyA0LjU5N2EuODQzLjg0MyAwIDAgMS0wIDEuMTk0bC04Ljc1NSA4Ljc1N2EuODQzLjg0MyAwIDAgMS0xLjE5NCAwIiBmaWxsPSIjRkY0NDQ0IiBzdHJva2U9IiMwMDAiIHN0cm9rZS13aWR0aD0iMSIvPgo8L3N2Zz4K') 12 12, crosshair !important;
     transition: background-color 0.2s ease, opacity 0.2s ease !important;
 }
 
 .pdf-highlight-erasable:hover {
     background-color: #ff4444 !important;
     opacity: 0.6 !important;
-    cursor: crosshair !important;
-}
-
-/* Force eraser cursor on all child elements when eraser is active */
-.eraser-active, .eraser-active *, .eraser-active .rpv-core__viewer, .eraser-active .rpv-core__page, .eraser-active .pdf-highlight-erasable {
-    /* Force standard crosshair cursor on all child elements when eraser is active */
-    cursor: crosshair !important;
 }
 
 /* Enhance number markers appearance when eraser is active */
@@ -358,21 +343,6 @@
 .pdf-highlight-overlay[data-highlight-index] {
     background-color: rgba(255, 235, 59, 0.5);
     border: 1px solid rgba(255, 193, 7, 0.3);
-}
-
-/* Make our custom overlay elements able to receive pointer events and sit above text
-   when eraser is active. The highlight elements created in React are given
-   class `pdf-highlight-erasable` and are positioned absolutely; ensure they
-   have high z-index and pointer-events enabled so clicks register. */
-.pdf-highlight-erasable {
-    pointer-events: auto !important;
-    z-index: 1200 !important;
-}
-
-.pdf-highlight-erasable[title] {
-    -webkit-user-select: none;
-    -moz-user-select: none;
-    user-select: none;
 }
 
 /* Enhanced hover states for better user feedback */
