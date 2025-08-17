@@ -8,7 +8,11 @@ const ContentView = ({
     editingCommand,
     onTextSelection,
     onCreateNumberAnnotation,
-    onCommandProcessed
+    onCommandProcessed,
+    noteId,
+    onSaveFunction,
+    onAnnotationsChange,
+    onUnsavedChanges
 }) => {
     // Memoize the text selection handler to prevent re-renders
     const handleTextSelection = useCallback((selection) => {
@@ -29,6 +33,10 @@ const ContentView = ({
                     onTextSelection={handleTextSelection}
                     onCreateNumberAnnotation={onCreateNumberAnnotation}
                     onCommandProcessed={onCommandProcessed}
+                    noteId={noteId}
+                    onSaveFunction={onSaveFunction}
+                    onAnnotationsChange={onAnnotationsChange}
+                    onUnsavedChanges={onUnsavedChanges}
                 />
             </div>
         );

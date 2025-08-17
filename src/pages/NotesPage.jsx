@@ -220,6 +220,18 @@ const MainLayout = React.memo(() => {
     [navigate]
   );
 
+  const handleExportAnnotations = useCallback(() => {
+    // TODO: Implement PDF export with annotations
+    console.log('Export annotations functionality to be implemented');
+    toast.info('Export functionality coming soon!');
+  }, []);
+
+  const handleSaveAnnotations = useCallback(() => {
+    // The actual saving is handled by the PDF viewer component
+    // This callback can be used for additional UI feedback
+    console.log('Annotations saved successfully');
+  }, []);
+
   const handleCreateNumberAnnotation = useCallback(
     (number, position) => {
       const annotationNote = {
@@ -313,6 +325,9 @@ const MainLayout = React.memo(() => {
           onPageChange={handlePageChange}
           onTextSelection={handleTextSelection}
           onCreateNumberAnnotation={handleCreateNumberAnnotation}
+          noteId={noteData?._id || noteData?.id}
+          onSave={handleSaveAnnotations}
+          onExport={handleExportAnnotations}
         />
         <NotesPanel
           activeTab={activeTab}

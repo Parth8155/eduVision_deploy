@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import TopToolbar from "./TopToolbar";
 import DrawingToolbar from "./DrawingToolbar";
 import ContentView from "./ContentView";
@@ -10,6 +10,9 @@ const ContentArea = ({
   currentPage = 4,
   onTextSelection,
   onCreateNumberAnnotation,
+  noteId, // Add noteId prop
+  onSave, // Add save callback
+  onExport, // Add export callback
 }) => {
   const [selectedTool, setSelectedTool] = useState("select");
   const [selectedColor, setSelectedColor] = useState("#4ECDC4");
@@ -20,6 +23,11 @@ const ContentArea = ({
   const [canRedo, setCanRedo] = useState(false);
   const [studyModeEnabled, setStudyModeEnabled] = useState(false);
   const [viewModeEnabled, setViewModeEnabled] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+
+  // Reference to PDF viewer's save function
+  const saveAnnotationsRef = useRef(null);
 
   // When a drawing/annotation tool is active, prevent text selection across the rest
   // of the app (so other UI like chatbots won't get selected during drag). We allow
@@ -243,11 +251,48 @@ const ContentArea = ({
     return () => clearInterval(interval);
   }, []);
 
+  // Save handler
+  const handleSave = useCallback(async () => {
+    if (!saveAnnotationsRef.current || isSaving) return;
+
+    setIsSaving(true);
+    try {
+      const success = await saveAnnotationsRef.current();
+      if (success) {
+        setHasUnsavedChanges(false);
+        if (onSave) {
+          onSave();
+        }
+      }
+    } catch (error) {
+      console.error('Save failed:', error);
+    } finally {
+      setIsSaving(false);
+    }
+  }, [isSaving, onSave]);
+
+  // Export handler
+  const handleExport = useCallback(() => {
+    if (onExport) {
+      onExport();
+    }
+  }, [onExport]);
+
+  // Handle annotations change callback
+  const handleAnnotationsChange = useCallback((annotations) => {
+    setHasUnsavedChanges(false); // Just saved, so no unsaved changes
+  }, []);
+
   return (
     <div className="flex-1 bg-white dark:bg-gray-900 flex flex-col min-w-0 overflow-hidden">
       {/* Top toolbar */}
       <div className="flex-shrink-0">
-        <TopToolbar />
+        <TopToolbar 
+          onSave={handleSave}
+          onExport={handleExport}
+          isSaving={isSaving}
+          hasUnsavedChanges={hasUnsavedChanges}
+        />
       </div>
 
       {/* Drawing toolbar */}
@@ -287,6 +332,10 @@ const ContentArea = ({
             onTextSelection={handleTextSelection}
             onCreateNumberAnnotation={onCreateNumberAnnotation}
             onCommandProcessed={() => setEditingCommand(null)}
+            noteId={noteId}
+            onSaveFunction={(saveFunc) => { saveAnnotationsRef.current = saveFunc; }}
+            onAnnotationsChange={handleAnnotationsChange}
+            onUnsavedChanges={setHasUnsavedChanges}
           />
         </div>
       </div>

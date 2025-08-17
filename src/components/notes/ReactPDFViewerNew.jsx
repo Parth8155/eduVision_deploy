@@ -6,6 +6,7 @@ import "@react-pdf-viewer/core/lib/styles/index.css";
 import "@react-pdf-viewer/default-layout/lib/styles/index.css";
 import "@react-pdf-viewer/highlight/lib/styles/index.css";
 import "./pdf-viewer-enhanced.css";
+import annotationsService from "../../services/annotationsService";
 
 // Worker URL pinned to pdfjs-dist 3.11.174 for compatibility
 const WORKER_URL =
@@ -23,6 +24,8 @@ function ReactPDFViewerNew(props) {
     onCreateNumberAnnotation,
     currentTool = "highlighter",
     currentColor = "#ffeb3b",
+    noteId, // Add noteId prop for saving/loading annotations
+    onAnnotationsChange, // Callback when annotations change
   } = props;
 
   const [fileUrl, setFileUrl] = useState("");
@@ -35,6 +38,7 @@ function ReactPDFViewerNew(props) {
 
   // Store highlights using the plugin's percent-based coordinates
   const [highlights, setHighlights] = useState([]);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
   const viewerRef = useRef(null);
 
@@ -42,6 +46,147 @@ function ReactPDFViewerNew(props) {
   const undoStackRef = useRef([]);
   const redoStackRef = useRef([]);
   const STACK_LIMIT = 100;
+
+  // Track if annotations are loaded
+  const [annotationsLoaded, setAnnotationsLoaded] = useState(false);
+
+  // Load annotations when component mounts or noteId changes
+  useEffect(() => {
+    const loadAnnotations = async () => {
+      if (!noteId) return;
+
+      try {
+        console.log('📖 Loading annotations for note:', noteId);
+        const savedAnnotations = await annotationsService.loadAnnotations(noteId);
+        
+        if (savedAnnotations.highlights && Array.isArray(savedAnnotations.highlights)) {
+          console.log('📖 Loaded highlights:', savedAnnotations.highlights.length);
+          setHighlights(savedAnnotations.highlights);
+        }
+
+        // Load number markers if they exist
+        if (savedAnnotations.numberMarkers && Array.isArray(savedAnnotations.numberMarkers)) {
+          console.log('📖 Loaded number markers:', savedAnnotations.numberMarkers.length);
+          // Restore number markers to DOM
+          setTimeout(() => {
+            savedAnnotations.numberMarkers.forEach(marker => {
+              const pageEl = document.querySelector(`[data-page-number="${marker.pageNumber - 1}"]`);
+              if (pageEl) {
+                const markerEl = document.createElement("div");
+                markerEl.className = "pdf-number-marker";
+                markerEl.textContent = String(marker.number);
+                markerEl.style.cssText = `
+                  position: absolute;
+                  left: ${marker.x - 10}px;
+                  top: ${marker.y - 10}px;
+                  width: 20px;
+                  height: 20px;
+                  border-radius: 50%;
+                  background: #111;
+                  color: #fff;
+                  font-size: 12px;
+                  line-height: 20px;
+                  text-align: center;
+                  box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+                  z-index: 1200;
+                  user-select: none;
+                  pointer-events: auto;
+                  cursor: pointer;
+                  transition: background-color 0.2s ease;
+                `;
+                pageEl.appendChild(markerEl);
+                nextNumberRef.current = Math.max(nextNumberRef.current, marker.number + 1);
+              }
+            });
+          }, 1000); // Delay to ensure PDF pages are rendered
+        }
+
+        setAnnotationsLoaded(true);
+        setHasUnsavedChanges(false);
+      } catch (error) {
+        console.error('Failed to load annotations:', error);
+        setAnnotationsLoaded(true);
+      }
+    };
+
+    loadAnnotations();
+  }, [noteId]);
+
+  // Save annotations to backend
+  const saveAnnotations = useCallback(async () => {
+    if (!noteId || !annotationsLoaded) return false;
+
+    try {
+      console.log('💾 Saving annotations for note:', noteId);
+      
+      // Collect number markers from DOM
+      const numberMarkers = [];
+      document.querySelectorAll('.pdf-number-marker').forEach(marker => {
+        const pageEl = marker.closest('[data-page-number]');
+        if (pageEl) {
+          const pageNumber = parseInt(pageEl.getAttribute('data-page-number'), 10) + 1;
+          const rect = marker.getBoundingClientRect();
+          const pageRect = pageEl.getBoundingClientRect();
+          const x = rect.left - pageRect.left + 10; // Add marker radius offset
+          const y = rect.top - pageRect.top + 10;
+          
+          numberMarkers.push({
+            number: parseInt(marker.textContent, 10),
+            x,
+            y,
+            pageNumber
+          });
+        }
+      });
+
+      const annotationsData = {
+        highlights,
+        numberMarkers,
+        lastModified: new Date().toISOString()
+      };
+
+      await annotationsService.saveAnnotations(noteId, annotationsData);
+      setHasUnsavedChanges(false);
+      
+      // Notify parent component
+      if (onAnnotationsChange) {
+        onAnnotationsChange(annotationsData);
+      }
+      
+      return true;
+    } catch (error) {
+      console.error('Failed to save annotations:', error);
+      return false;
+    }
+  }, [noteId, highlights, annotationsLoaded, onAnnotationsChange]);
+
+  // Auto-save when annotations change
+  useEffect(() => {
+    if (!annotationsLoaded) return;
+
+    const timeoutId = setTimeout(() => {
+      if (hasUnsavedChanges && noteId) {
+        console.log('🔄 Auto-saving annotations...');
+        saveAnnotations();
+      }
+    }, 3000); // Auto-save after 3 seconds of inactivity
+
+    return () => clearTimeout(timeoutId);
+  }, [highlights, hasUnsavedChanges, annotationsLoaded, noteId, saveAnnotations]);
+
+  // Notify parent when unsaved changes occur
+  useEffect(() => {
+    if (props.onUnsavedChanges) {
+      props.onUnsavedChanges(hasUnsavedChanges);
+    }
+  }, [hasUnsavedChanges, props.onUnsavedChanges]);
+
+  // Expose save function to parent
+  useEffect(() => {
+    if (props.onSaveFunction) {
+      props.onSaveFunction(saveAnnotations);
+    }
+  }, [saveAnnotations, props.onSaveFunction]);
 
   const pushUndoSnapshot = () => {
     try {
@@ -65,6 +210,7 @@ function ReactPDFViewerNew(props) {
     const prev = undoStackRef.current.pop();
     redoStackRef.current.push(JSON.parse(JSON.stringify(highlights)));
     setHighlights(prev || []);
+    setHasUnsavedChanges(true);
     try {
       window.canUndoPDF = undoStackRef.current.length > 0;
       window.canRedoPDF = redoStackRef.current.length > 0;
@@ -76,6 +222,7 @@ function ReactPDFViewerNew(props) {
     const next = redoStackRef.current.pop();
     undoStackRef.current.push(JSON.parse(JSON.stringify(highlights)));
     setHighlights(next || []);
+    setHasUnsavedChanges(true);
     try {
       window.canUndoPDF = undoStackRef.current.length > 0;
       window.canRedoPDF = redoStackRef.current.length > 0;
@@ -143,6 +290,7 @@ function ReactPDFViewerNew(props) {
                 console.log("📝 Updated highlights array:", updated.length, "items");
                 return updated;
               });
+              setHasUnsavedChanges(true);
               // Keep highlight creation separate from sending to chat
               p.cancel();
             }}
@@ -232,6 +380,7 @@ function ReactPDFViewerNew(props) {
                       pushUndoSnapshot();
                       // Remove the highlight
                       setHighlights((prev) => prev.filter((highlight) => highlight.id !== h.id));
+                      setHasUnsavedChanges(true);
                     }
                   : undefined
               }
@@ -275,6 +424,7 @@ function ReactPDFViewerNew(props) {
         // Snapshot current state then clear plugin-managed highlights so this can be undone
         pushUndoSnapshot();
         setHighlights([]);
+        setHasUnsavedChanges(true);
         // Clear number markers
         document
           .querySelectorAll(".pdf-number-marker")
@@ -382,6 +532,7 @@ function ReactPDFViewerNew(props) {
         e.stopPropagation();
         pushUndoSnapshot();
         e.target.remove();
+        setHasUnsavedChanges(true);
         return;
       }
 
@@ -432,6 +583,7 @@ function ReactPDFViewerNew(props) {
       const computed = getComputedStyle(pageEl);
       if (computed.position === "static") pageEl.style.position = "relative";
       pageEl.appendChild(marker);
+      setHasUnsavedChanges(true);
       onCreateNumberAnnotation?.(number, { x, y, pageNumber });
     };
 
