@@ -1,12 +1,41 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { BookOpen, Menu, X, Bell, Settings, User } from "lucide-react";
+import { GraduationCap, Menu, X, Bell, Settings, User } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 import ThemeToggle from "./ui/ThemeToggle";
 
 const Navigation = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [userName, setUserName] = useState("User");
   const location = useLocation();
+
+  // Get user data from localStorage or API
+  useEffect(() => {
+    const getUserData = () => {
+      try {
+        // First try to get from localStorage (if stored during login)
+        const userData = localStorage.getItem('userData');
+        if (userData) {
+          const user = JSON.parse(userData);
+          setUserName(user.name || user.firstName || user.email?.split('@')[0] || "User");
+          return;
+        }
+
+        // Alternatively, get from token payload
+        const token = localStorage.getItem('accessToken');
+        if (token) {
+          // Decode JWT payload (basic decode without verification)
+          const payload = JSON.parse(atob(token.split('.')[1]));
+          setUserName(payload.name || payload.firstName || payload.email?.split('@')[0] || "User");
+        }
+      } catch (error) {
+        console.error('Error getting user data:', error);
+        setUserName("User");
+      }
+    };
+
+    getUserData();
+  }, []);
 
   const navigationItems = [
     {
@@ -38,10 +67,10 @@ const Navigation = () => {
           {/* Logo */}
           <Link to="/" className="flex items-center space-x-3">
             <div className="w-8 h-8 bg-black dark:bg-white rounded-lg flex items-center justify-center">
-              <BookOpen className="w-5 h-5 text-white dark:text-black" />
+              <GraduationCap className="w-5 h-5 text-white dark:text-black" />
             </div>
             <span className="text-xl font-bold text-black dark:text-white">
-              StudyAI Hub
+              eduVision
             </span>
           </Link>
 
@@ -65,18 +94,6 @@ const Navigation = () => {
           {/* Right side items */}
           <div className="flex items-center space-x-4">
             <ThemeToggle />
-            {/* Notifications */}
-            <Button variant="ghost" size="sm" className="relative">
-              <Bell className="w-5 h-5 text-gray-600 dark:text-gray-400" />
-              <span className="absolute -top-1 -right-1 w-3 h-3 bg-black dark:bg-white rounded-full text-xs flex items-center justify-center">
-                <span className="w-1.5 h-1.5 bg-white dark:bg-black rounded-full"></span>
-              </span>
-            </Button>
-
-            {/* Settings */}
-            <Button variant="ghost" size="sm">
-              <Settings className="w-5 h-5 text-gray-600 dark:text-gray-400" />
-            </Button>
 
             {/* Profile */}
             <Button
@@ -88,7 +105,7 @@ const Navigation = () => {
                 <User className="w-4 h-4 text-white dark:text-black" />
               </div>
               <span className="hidden md:block text-sm font-medium text-gray-700 dark:text-gray-300">
-                Alex
+                {userName}
               </span>
             </Button>
 

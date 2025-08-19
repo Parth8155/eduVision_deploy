@@ -11,7 +11,6 @@ import {
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Upload,
   BookOpen,
@@ -19,8 +18,6 @@ import {
   Star,
   Clock,
   FileText,
-  Calendar,
-  TrendingUp,
   CheckCircle,
   Plus,
   Filter,
@@ -28,12 +25,10 @@ import {
   List,
   MoreHorizontal,
   RefreshCw,
-  Loader2,
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import Navigation from "@/components/Navigation";
 import notesService from "@/services/notesService";
-// Removed TypeScript type import
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -41,26 +36,13 @@ const Dashboard = () => {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
-  // User data state
   const [recentNotes, setRecentNotes] = useState([]);
   const [userInfo, setUserInfo] = useState(null);
   const [dashboardStats, setDashboardStats] = useState({
     totalNotes: 0,
     studySessions: 0,
     mcqsGenerated: 0,
-    weeklyHours: 0,
   });
-
-  // Weekly progress - this could come from a separate analytics API
-  const [weeklyProgress] = useState([
-    { day: "Mon", hours: 2.5 },
-    { day: "Tue", hours: 1.8 },
-    { day: "Wed", hours: 3.2 },
-    { day: "Thu", hours: 2.1 },
-    { day: "Fri", hours: 1.5 },
-    { day: "Sat", hours: 4.0 },
-    { day: "Sun", hours: 2.8 },
-  ]);
 
   useEffect(() => {
     const token = notesService.getAuthToken();
@@ -125,15 +107,10 @@ const Dashboard = () => {
       const studySessions = notes.reduce((total, note) => {
         return total + note.views;
       }, 0);
-      const weeklyHours = weeklyProgress.reduce(
-        (total, day) => total + day.hours,
-        0
-      );
       setDashboardStats({
         totalNotes,
         studySessions,
         mcqsGenerated,
-        weeklyHours,
       });
     } catch (error) {
       console.error("Error loading dashboard stats:", error);
@@ -187,12 +164,7 @@ const Dashboard = () => {
       icon: CheckCircle,
       color: "text-purple-600",
     },
-    {
-      label: "This Week",
-      value: `${dashboardStats.weeklyHours}hrs`,
-      icon: TrendingUp,
-      color: "text-orange-600",
-    },
+
   ];
 
   if (loading) {
@@ -302,7 +274,7 @@ const Dashboard = () => {
         </div>
 
         {/* Quick Stats */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mb-8">
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-6 mb-8">
           {studyStats.map((stat, index) => {
             const Icon = stat.icon;
             return (
@@ -421,16 +393,7 @@ const Dashboard = () => {
                             <Badge variant="secondary" className="text-xs">
                               {note.subject}
                             </Badge>
-                            <Badge
-                              variant={
-                                note.status === "completed"
-                                  ? "default"
-                                  : "secondary"
-                              }
-                              className="text-xs"
-                            >
-                              {note.status}
-                            </Badge>
+                            
                           </div>
 
                           <div className="text-xs text-gray-500 dark:text-gray-400 mb-2">
@@ -438,31 +401,7 @@ const Dashboard = () => {
                             {new Date(note.uploadDate).toLocaleDateString()}
                           </div>
 
-                          {note.status === "completed" ? (
-                            <div className="flex items-center justify-between text-xs">
-                              {note.accuracy && (
-                                <span className="text-green-600 dark:text-green-400">
-                                  {note.accuracy}% accuracy
-                                </span>
-                              )}
-                              <span className="text-gray-500">
-                                {note.generatedItems?.mcqs || 0} MCQs •{" "}
-                                {note.generatedItems?.questions || 0} Questions
-                              </span>
-                            </div>
-                          ) : note.status === "processing" ? (
-                            <div className="space-y-1">
-                              <div className="flex justify-between text-xs text-gray-500">
-                                <span>Processing...</span>
-                                <span>65%</span>
-                              </div>
-                              <Progress value={65} className="h-1" />
-                            </div>
-                          ) : (
-                            <div className="text-xs text-red-500">
-                              Processing failed
-                            </div>
-                          )}
+                        
                         </div>
                       </div>
                     ))}
@@ -532,47 +471,6 @@ const Dashboard = () => {
                     Browse Library
                   </Button>
                 </Link>
-              </CardContent>
-            </Card>
-
-            {/* Weekly Activity */}
-            <Card className="border-gray-200 dark:border-gray-700 dark:bg-gray-800">
-              <CardHeader>
-                <CardTitle className="text-lg text-gray-900 dark:text-white">
-                  This Week's Activity
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {weeklyProgress.map((day, index) => (
-                    <div key={day.day} className="flex items-center space-x-3">
-                      <span className="text-sm font-medium text-gray-600 dark:text-gray-400 w-8">
-                        {day.day}
-                      </span>
-                      <div className="flex-1">
-                        <Progress
-                          value={(day.hours / 4) * 100}
-                          className="h-2"
-                        />
-                      </div>
-                      <span className="text-sm text-gray-500 dark:text-gray-400 w-12">
-                        {day.hours}h
-                      </span>
-                    </div>
-                  ))}
-                </div>
-                <div className="mt-4 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
-                  <div className="flex items-center space-x-2">
-                    <TrendingUp className="w-4 h-4 text-blue-600 dark:text-blue-400" />
-                    <span className="text-sm font-medium text-blue-800 dark:text-blue-300">
-                      Great progress this week!
-                    </span>
-                  </div>
-                  <p className="text-xs text-blue-600 dark:text-blue-400 mt-1">
-                    You've studied {dashboardStats.weeklyHours} hours across
-                    your subjects
-                  </p>
-                </div>
               </CardContent>
             </Card>
           </div>

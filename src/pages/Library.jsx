@@ -29,7 +29,6 @@ import Navigation from "@/components/Navigation";
 import notesService from "@/services/notesService";
 import studyToolsService from "@/services/studyToolsService";
 
-// Context Menu Component
 const ContextMenu = ({
   item,
   x,
@@ -198,6 +197,8 @@ const Library = () => {
   const [viewMode, setViewMode] = useState("grid");
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedFilter, setSelectedFilter] = useState("all");
+  const [selectedSubject, setSelectedSubject] = useState("");
+  const [selectedFolder, setSelectedFolder] = useState("");
   const [contextMenu, setContextMenu] = useState(null);
 
   // API State
@@ -325,7 +326,7 @@ const Library = () => {
     }, 500);
 
     return () => clearTimeout(delayedSearch);
-  }, [searchQuery, selectedFilter, sortBy, sortOrder]);
+  }, [searchQuery, selectedFilter, selectedSubject, selectedFolder, sortBy, sortOrder]);
 
   useEffect(() => {
     loadNotes(currentPage);
@@ -370,7 +371,18 @@ const Library = () => {
     
     allItems = [...allItems, ...formattedStudyMaterials];
 
-    // Apply filters
+    // Apply subject filter
+    if (selectedSubject) {
+      allItems = allItems.filter((item) => item.subject === selectedSubject);
+    }
+
+    // Apply folder filter
+    if (selectedFolder) {
+      const [folderName, subjectName] = selectedFolder.split('-');
+      allItems = allItems.filter((item) => item.folder === folderName && item.subject === subjectName);
+    }
+
+    // Apply type filters
     if (selectedFilter === "starred") {
       return allItems.filter((item) => item.starred);
     }
@@ -596,6 +608,30 @@ const Library = () => {
     }
   };
 
+  // Handle subject and folder clicks
+  const handleSubjectClick = (subjectName) => {
+    if (selectedSubject === subjectName) {
+      // If already selected, clear the filter
+      setSelectedSubject("");
+    } else {
+      setSelectedSubject(subjectName);
+      setSelectedFolder(""); // Clear folder filter when selecting subject
+      setSelectedFilter("all"); // Reset other filters
+    }
+  };
+
+  const handleFolderClick = (folderName, subjectName) => {
+    const folderKey = `${folderName}-${subjectName}`;
+    if (selectedFolder === folderKey) {
+      // If already selected, clear the filter
+      setSelectedFolder("");
+    } else {
+      setSelectedFolder(folderKey);
+      setSelectedSubject(""); // Clear subject filter when selecting folder
+      setSelectedFilter("all"); // Reset other filters
+    }
+  };
+
   // Close context menu when clicking elsewhere
   useEffect(() => {
     const handleClick = () => setContextMenu(null);
@@ -712,14 +748,6 @@ const Library = () => {
                     className="pl-10 dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:placeholder-gray-400"
                   />
                 </div>
-                <Button variant="outline" size="sm">
-                  <Filter className="w-4 h-4 mr-2" />
-                  Filter
-                </Button>
-                <Button variant="outline" size="sm">
-                  <SortAsc className="w-4 h-4 mr-2" />
-                  Sort
-                </Button>
               </div>
 
               <div className="flex items-center space-x-2">
@@ -757,40 +785,23 @@ const Library = () => {
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-2">
-                {{
-                  all: "All Items",
-                  starred: "Starred",
-                  recent: "Recent",
-                  notes: "Notes",
-                  summary: "Summaries",
-                  mcq: "MCQs",
-                  practice: "Practice",
-                }[selectedFilter] && (
-                  <Button
-                    variant="default"
-                    size="sm"
-                    className="w-full justify-between"
-                    onClick={() => setSelectedFilter("all")}
-                  >
-                    <span>All Items</span>
-                    <Badge variant="secondary" className="text-xs">
-                      {pagination.totalNotes}
-                    </Badge>
-                  </Button>
-                )}
+                <Button
+                  variant={selectedFilter === "all" ? "default" : "ghost"}
+                  size="sm"
+                  className="w-full justify-between"
+                  onClick={() => setSelectedFilter("all")}
+                >
+                  <span>All Items</span>
+                  <Badge variant="secondary" className="text-xs">
+                    {filterCounts.all}
+                  </Badge>
+                </Button>
                 {Object.entries({
-                  starred: notes.filter((note) => note.starred).length,
-                  recent: notes.filter((note) => {
-                    const threeDaysAgo = new Date();
-                    threeDaysAgo.setDate(threeDaysAgo.getDate() - 3);
-                    return new Date(note.lastAccessed) > threeDaysAgo;
-                  }).length,
-                  notes: notes.filter((note) => note.type === "notes").length,
-                  summary: notes.filter((note) => note.type === "summary")
-                    .length,
-                  mcq: notes.filter((note) => note.type === "mcq").length,
-                  practice: notes.filter((note) => note.type === "practice")
-                    .length,
+                  recent: filterCounts.recent,
+                  notes: filterCounts.notes,
+                  summary: filterCounts.summary,
+                  mcq: filterCounts.mcq,
+                  practice: filterCounts.practice,
                 }).map(([key, count]) => (
                   <Button
                     key={key}
@@ -819,18 +830,27 @@ const Library = () => {
                 {subjects.map((subject, index) => (
                   <div
                     key={subject._id}
-                    className="flex items-center space-x-3 p-2 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg cursor-pointer"
+                    className={`flex items-center space-x-3 p-2 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg cursor-pointer transition-colors ${
+                      selectedSubject === subject._id 
+                        ? 'bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800' 
+                        : ''
+                    }`}
+                    onClick={() => handleSubjectClick(subject._id)}
                   >
                     <div
                       className={`w-4 h-4 rounded`}
                       style={{ backgroundColor: getSubjectColor(subject._id) }}
                     ></div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
+                      <p className={`text-sm font-medium truncate ${
+                        selectedSubject === subject._id 
+                          ? 'text-blue-900 dark:text-blue-100' 
+                          : 'text-gray-900 dark:text-white'
+                      }`}>
                         {subject._id}
                       </p>
                     </div>
-                    <Badge variant="secondary" className="text-xs">
+                    <Badge variant={selectedSubject === subject._id ? "default" : "secondary"} className="text-xs">
                       {subject.count}
                     </Badge>
                   </div>
@@ -851,25 +871,45 @@ const Library = () => {
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
-                {folders.map((folder, index) => (
-                  <div
-                    key={`${folder._id.folder}-${folder._id.subject}`}
-                    className="flex items-center space-x-3 p-2 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg cursor-pointer"
-                  >
-                    <Folder className="w-4 h-4 text-gray-600 dark:text-gray-400" />
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
-                        {folder._id.folder}
-                      </p>
-                      <p className="text-xs text-gray-500 dark:text-gray-400">
-                        {folder._id.subject}
-                      </p>
+                {folders.map((folder, index) => {
+                  const folderKey = `${folder._id.folder}-${folder._id.subject}`;
+                  return (
+                    <div
+                      key={folderKey}
+                      className={`flex items-center space-x-3 p-2 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg cursor-pointer transition-colors ${
+                        selectedFolder === folderKey 
+                          ? 'bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800' 
+                          : ''
+                      }`}
+                      onClick={() => handleFolderClick(folder._id.folder, folder._id.subject)}
+                    >
+                      <Folder className={`w-4 h-4 ${
+                        selectedFolder === folderKey 
+                          ? 'text-blue-600 dark:text-blue-400' 
+                          : 'text-gray-600 dark:text-gray-400'
+                      }`} />
+                      <div className="flex-1 min-w-0">
+                        <p className={`text-sm font-medium truncate ${
+                          selectedFolder === folderKey 
+                            ? 'text-blue-900 dark:text-blue-100' 
+                            : 'text-gray-900 dark:text-white'
+                        }`}>
+                          {folder._id.folder}
+                        </p>
+                        <p className={`text-xs ${
+                          selectedFolder === folderKey 
+                            ? 'text-blue-700 dark:text-blue-300' 
+                            : 'text-gray-500 dark:text-gray-400'
+                        }`}>
+                          {folder._id.subject}
+                        </p>
+                      </div>
+                      <Badge variant={selectedFolder === folderKey ? "default" : "secondary"} className="text-xs">
+                        {folder.count}
+                      </Badge>
                     </div>
-                    <Badge variant="secondary" className="text-xs">
-                      {folder.count}
-                    </Badge>
-                  </div>
-                ))}
+                  );
+                })}
                 {folders.length === 0 && (
                   <p className="text-sm text-gray-500 dark:text-gray-400 text-center py-4">
                     No folders yet.
@@ -917,18 +957,55 @@ const Library = () => {
           {/* Main Content */}
           <div className="lg:col-span-3">
             <div className="mb-4 flex items-center justify-between">
-              <p className="text-sm text-gray-600 dark:text-gray-400">
-                Showing {filteredItems.length} of {pagination.totalNotes + studyMaterials.length} items
-              </p>
-              <div className="flex items-center space-x-2">
-                <Button variant="outline" size="sm">
-                  <Download className="w-4 h-4 mr-2" />
-                  Export
-                </Button>
-                <Button variant="outline" size="sm">
-                  <Share className="w-4 h-4 mr-2" />
-                  Share
-                </Button>
+              <div className="flex items-center space-x-4">
+                <p className="text-sm text-gray-600 dark:text-gray-400">
+                  Showing {filteredItems.length} of {pagination.totalNotes + studyMaterials.length} items
+                </p>
+                {/* Active Filters Display */}
+                {(selectedSubject || selectedFolder || selectedFilter !== "all") && (
+                  <div className="flex items-center space-x-2">
+                    <span className="text-xs text-gray-500 dark:text-gray-400">Filters:</span>
+                    {selectedSubject && (
+                      <Badge 
+                        variant="secondary" 
+                        className="text-xs cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600"
+                        onClick={() => setSelectedSubject("")}
+                      >
+                        Subject: {selectedSubject} ×
+                      </Badge>
+                    )}
+                    {selectedFolder && (
+                      <Badge 
+                        variant="secondary" 
+                        className="text-xs cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600"
+                        onClick={() => setSelectedFolder("")}
+                      >
+                        Folder: {selectedFolder.split('-')[0]} ×
+                      </Badge>
+                    )}
+                    {selectedFilter !== "all" && (
+                      <Badge 
+                        variant="secondary" 
+                        className="text-xs cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600"
+                        onClick={() => setSelectedFilter("all")}
+                      >
+                        Type: {selectedFilter} ×
+                      </Badge>
+                    )}
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="text-xs h-6 px-2"
+                      onClick={() => {
+                        setSelectedSubject("");
+                        setSelectedFolder("");
+                        setSelectedFilter("all");
+                      }}
+                    >
+                      Clear all
+                    </Button>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -1004,16 +1081,7 @@ const Library = () => {
                                 <Badge variant="secondary" className="text-xs">
                                   {item.subject}
                                 </Badge>
-                                <Badge
-                                  variant={
-                                    item.status === "completed"
-                                      ? "default"
-                                      : "secondary"
-                                  }
-                                  className="text-xs"
-                                >
-                                  {item.status}
-                                </Badge>
+                                
                               </div>
                               <div className="text-xs text-gray-500 dark:text-gray-400 mb-3">
                                 <div className="flex items-center space-x-4">

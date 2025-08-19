@@ -43,7 +43,7 @@ const Sidebar = ({
               </span>
             </div>
             <span className="font-semibold text-black dark:text-white truncate">
-              StudyAI Hub
+              eduVision{" "}
             </span>
           </div>
         )}

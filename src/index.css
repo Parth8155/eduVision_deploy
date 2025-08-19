@@ -426,7 +426,6 @@
     background: linear-gradient(to bottom, #5a6fd8, #6b3d92);
   }
 
-  /* Custom enhancements for StudyAI Hub brand */
   .brand-heading {
     font-weight: 600;
     letter-spacing: -0.025em;
@@ -466,10 +465,10 @@ html {
 }
 
 /* Focus states for accessibility */
-button:focus,
-a:focus {
-  outline: 2px solid #667eea;
+button:active{
+  outline: 2px solid #292c3c;
   outline-offset: 2px;
+  border-radius: 5%;
 }
 
 /* Reduced motion support */

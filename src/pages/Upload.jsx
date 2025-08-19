@@ -294,31 +294,6 @@ const Upload = () => {
                       </div>
                     </div>
                   )}
-
-                {/* Debug info for development */}
-                {process.env.NODE_ENV === "development" && (
-                  <div className="mt-4 p-4 bg-gray-100 dark:bg-gray-800 rounded-lg text-xs">
-                    <div className="text-gray-700 dark:text-gray-300">
-                      Files: {files.length}
-                    </div>
-                    <div className="text-gray-700 dark:text-gray-300">
-                      Title: {noteTitle}
-                    </div>
-                    <div className="text-gray-700 dark:text-gray-300">
-                      Subject: {selectedSubject}
-                    </div>
-                    <div className="text-gray-700 dark:text-gray-300">
-                      Uploading: {uploading.toString()}
-                    </div>
-                    <div className="text-gray-700 dark:text-gray-300">
-                      First file name: {files[0]?.name || "N/A"}
-                    </div>
-                    <div className="text-gray-700 dark:text-gray-300">
-                      First file original:{" "}
-                      {files[0]?.originalFile?.name || "N/A"}
-                    </div>
-                  </div>
-                )}
                 <RecentUploads />
               </TabsContent>
 

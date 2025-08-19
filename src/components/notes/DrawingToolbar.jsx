@@ -4,13 +4,10 @@ import {
   Type,
   Undo,
   Redo,
-  Trash2,
   Hash,
   Eye,
   EyeOff,
   MousePointer,
-  Pen,
-  Search,
 } from "lucide-react";
 
 const DrawingToolbar = ({
@@ -26,45 +23,24 @@ const DrawingToolbar = ({
   onRedo,
   canUndo = false,
   canRedo = false,
-  onToggleStudyMode,
-  studyModeEnabled = false,
   onBookmark,
   onAddNote,
 }) => {
   // Define tool categories for better organization
   const readingTools = [
     { id: "select", icon: MousePointer, label: "Select/Navigate" },
-    { id: "search", icon: Search, label: "Search Text" },
   ];
 
   const annotationTools = [
     { id: "highlighter", icon: Highlighter, label: "Highlighter" },
-    { id: "pen", icon: Pen, label: "Free Draw" },
     { id: "number", icon: Hash, label: "Number Annotation" },
     { id: "text", icon: Type, label: "Text Note" },
   ];
 
   const editingTools = [{ id: "eraser", icon: Eraser, label: "Eraser" }];
-
-  const tools = [...readingTools, ...annotationTools, ...editingTools];
   return (
     <div className="flex items-center justify-center py-2">
       <div className="flex items-center space-x-1 bg-white dark:bg-gray-800 rounded-xl mx-1 p-2 shadow-sm border border-gray-200 dark:border-gray-700">
-        {/* Study Mode Toggle */}
-        <button
-          onClick={onToggleStudyMode}
-          className={`p-2 rounded transition-colors ${
-            studyModeEnabled
-              ? "bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-400"
-              : "text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700"
-          }`}
-          title={studyModeEnabled ? "Disable Study Mode" : "Enable Study Mode"}
-        >
-          {studyModeEnabled ? <EyeOff size={16} /> : <Eye size={16} />}
-        </button>
-
-        {/* Separator */}
-        <div className="w-px h-6 bg-gray-300 dark:bg-gray-600 mx-2"></div>
 
         {/* Reading Tools */}
         <div className="flex items-center space-x-1">
@@ -162,26 +138,6 @@ const DrawingToolbar = ({
         >
           <Redo size={16} />
         </button>
-
-        {/* Separator */}
-        <div className="w-px h-6 bg-gray-300 dark:bg-gray-600 mx-2"></div>
-
-        {/* Clear All */}
-        <button
-          className="p-2 rounded hover:bg-red-100 dark:hover:bg-red-900 transition-colors text-red-600 dark:text-red-400"
-          title="Clear All Annotations"
-          onClick={() => {
-            if (confirm("Are you sure you want to clear all annotations?")) {
-              // This will be handled by parent component
-              onToolClick("clear-all");
-            }
-          }}
-        >
-          <Trash2 size={16} />
-        </button>
-
-        {/* Separator */}
-        <div className="w-px h-6 bg-gray-300 dark:bg-gray-600 mx-2"></div>
 
         {/* Color Palette (only show when annotation tool is selected) */}
         {["highlighter"].includes(selectedTool) && (

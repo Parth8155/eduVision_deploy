@@ -41,9 +41,6 @@ const TopToolbar = ({ onSave, onExport, isSaving = false, hasUnsavedChanges = fa
                     Summary
                 </button>
             </div>
-            <div className="flex items-center space-x-2">
-                <span className="text-sm text-gray-600 dark:text-gray-400">English</span>
-            </div>
         </div>
     );
 };

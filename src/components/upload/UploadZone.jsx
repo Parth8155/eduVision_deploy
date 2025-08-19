@@ -20,7 +20,7 @@ const UploadZone = ({
         <div
           className={`rounded-xl p-12 text-center transition-all duration-300 ${dragActive
             ? 'border-2 border-blue-500 bg-blue-50 scale-[1.02] hover:bg-gray-50'
-            : 'border-2 border-transparent hover:bg-gray-800'
+            : 'border-2 border-transparent hover:bg-gray-200'
             }`}
           onDragEnter={onDragEnter}
           onDragLeave={onDragLeave}

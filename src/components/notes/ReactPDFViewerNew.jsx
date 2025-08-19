@@ -245,7 +245,127 @@ function ReactPDFViewerNew(props) {
 
   // Plugins
   const defaultLayoutPluginInstance = defaultLayoutPlugin({
-    sidebarTabs: (tabs) => [tabs[0]], // thumbnails only
+    sidebarTabs: (tabs) => [tabs[0]],
+    toolbarPlugin: {
+      // Customize toolbar items
+      fullScreenPlugin: {
+        // Enable/disable fullscreen button
+        enableShortcuts: false,
+      },
+      getFilePlugin: {
+        // Disable the "Open file" button
+        fileNameGenerator: () => '',
+      },
+      openPlugin: {
+        // Disable the "Open file" button
+        enableShortcuts: false,
+      },
+      printPlugin: {
+        // Enable/disable print button
+        enableShortcuts: false,
+      },
+      propertiesPlugin: {
+        // Enable/disable properties button
+        enableShortcuts: false,
+      },
+      rotatePlugin: {
+        // Enable/disable rotate buttons
+        enableShortcuts: false,
+      },
+      scrollModePlugin: {
+        // Enable/disable scroll mode buttons
+        enableShortcuts: false,
+      },
+      selectionModePlugin: {
+        // Enable/disable selection mode buttons
+        enableShortcuts: false,
+      },
+      themePlugin: {
+        // Enable/disable theme toggle
+        enableShortcuts: true,
+      },
+      zoomPlugin: {
+        // Enable/disable zoom buttons (keep these as they're useful)
+        enableShortcuts: true,
+      },
+    },
+    // Alternative: completely customize the toolbar
+    renderToolbar: (Toolbar) => (
+      <Toolbar>
+        {(slots) => {
+          const { 
+            CurrentPageInput, 
+            Download, 
+            EnterFullScreen, 
+            GoToNextPage, 
+            GoToPreviousPage, 
+            NumberOfPages, 
+            Open,
+            Print,
+            ShowProperties,
+            Zoom,
+            ZoomIn,
+            ZoomOut,
+          } = slots;
+          
+          return (
+            <div
+              style={{
+                alignItems: 'center',
+                display: 'flex',
+                width: '100%',
+              }}
+            >
+              <div style={{ padding: '0px 2px' }}>
+                <GoToPreviousPage />
+              </div>
+              <div style={{ padding: '0px 2px' }}>
+                <CurrentPageInput />
+              </div>
+              <div style={{ padding: '0px 2px' }}> / </div>
+              <div style={{ padding: '0px 2px' }}>
+                <NumberOfPages />
+              </div>
+              <div style={{ padding: '0px 2px' }}>
+                <GoToNextPage />
+              </div>
+              <div style={{ padding: '0px 2px', marginLeft: 'auto' }}>
+                <ZoomOut />
+              </div>
+              <div style={{ padding: '0px 2px' }}>
+                <Zoom />
+              </div>
+              <div style={{ padding: '0px 2px' }}>
+                <ZoomIn />
+              </div>
+              
+              {/* Only include the buttons you want */}
+              {/* Uncomment the ones you want to show: */}
+              
+              {/* <div style={{ padding: '0px 2px' }}>
+                <Open />
+              </div> */}
+              
+              {/* <div style={{ padding: '0px 2px' }}>
+                <Download />
+              </div> */}
+              
+              {/* <div style={{ padding: '0px 2px' }}>
+                <Print />
+              </div> */}
+              
+              {/* <div style={{ padding: '0px 2px' }}>
+                <EnterFullScreen />
+              </div> */}
+              
+              {/* <div style={{ padding: '0px 2px' }}>
+                <ShowProperties />
+              </div> */}
+            </div>
+          );
+        }}
+      </Toolbar>
+    ),
   });
 
   // HIGHLIGHT PLUGIN - uses percent coordinates and auto-repositions on zoom/rotate

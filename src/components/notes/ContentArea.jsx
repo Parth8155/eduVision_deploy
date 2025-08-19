@@ -1,6 +1,5 @@
 import { useState, useCallback, useEffect, useRef } from "react";
 import TopToolbar from "./TopToolbar";
-import DrawingToolbar from "./DrawingToolbar";
 import ContentView from "./ContentView";
 
 const ContentArea = ({
@@ -285,19 +284,14 @@ const ContentArea = ({
 
   return (
     <div className="flex-1 bg-white dark:bg-gray-900 flex flex-col min-w-0 overflow-hidden">
-      {/* Top toolbar */}
+      {/* Top toolbar with integrated drawing tools */}
       <div className="flex-shrink-0">
         <TopToolbar 
           onSave={handleSave}
           onExport={handleExport}
           isSaving={isSaving}
           hasUnsavedChanges={hasUnsavedChanges}
-        />
-      </div>
-
-      {/* Drawing toolbar */}
-      <div className="bg-gray-50 flex-shrink-0">
-        <DrawingToolbar
+          // DrawingToolbar props
           selectedTool={selectedTool}
           selectedColor={selectedColor}
           selectedStyle={selectedStyle}
@@ -312,10 +306,7 @@ const ContentArea = ({
           canRedo={canRedo}
           onToggleStudyMode={handleToggleStudyMode}
           studyModeEnabled={studyModeEnabled}
-          onToggleViewMode={handleToggleViewMode}
-          viewModeEnabled={viewModeEnabled}
           onBookmark={handleBookmark}
-          onSearch={handleSearch}
           onAddNote={handleAddNote}
         />
       </div>

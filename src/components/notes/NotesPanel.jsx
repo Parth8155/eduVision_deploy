@@ -1,7 +1,6 @@
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { useState, useRef, useCallback, useEffect } from 'react';
 import ChatBot from './ChatBot';
-import StudyQuestions from './StudyQuestions';
 import UserNotes from './UserNotes';
 import PageNavigation from './PageNavigation';
 
@@ -17,7 +16,7 @@ const NotesPanel = ({
     isCollapsed = false,
     onToggleCollapse
 }) => {
-    const tabs = ['Notes', 'AI Chat', 'Quiz'];
+    const tabs = ['Notes', 'AI Chat'];
 
     // Resize functionality with persistence
     const [width, setWidth] = useState(() => {
@@ -168,8 +167,8 @@ const NotesPanel = ({
                             />
                         </div>
                     </div>
-                ) : activeTab === 'AI Chat' ? (
-                    // Discussion/Chat interface with ChatBot component
+                ) : (
+                    // AI Chat interface with ChatBot component
                     <div className="flex-1 flex flex-col min-h-0 animate-fadeIn">
                         <div className="flex-1 overflow-hidden">
                             <ChatBot
@@ -177,16 +176,6 @@ const NotesPanel = ({
                                 isVisible={activeTab === 'AI Chat'}
                                 selectedText={selectedText}
                                 onClearSelectedText={onClearSelectedText}
-                            />
-                        </div>
-                    </div>
-                ) : (
-                    // Quiz interface with StudyQuestions component
-                    <div className="flex-1 flex flex-col min-h-0 animate-fadeIn">
-                        <div className="flex-1 overflow-hidden">
-                            <StudyQuestions
-                                noteData={noteData}
-                                isVisible={activeTab === 'Quiz'}
                             />
                         </div>
                     </div>
