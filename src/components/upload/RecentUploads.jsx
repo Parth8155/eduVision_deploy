@@ -64,22 +64,6 @@ const RecentUploads = () => {
 
     return uploadDate.toLocaleDateString();
   };
-
-  const getStatusColor = (status) => {
-    switch (status) {
-      case 'completed':
-        return 'default';
-      case 'processing':
-        return 'secondary';
-      case 'uploading':
-        return 'outline';
-      case 'failed':
-        return 'destructive';
-      default:
-        return 'secondary';
-    }
-  };
-
   if (loading) {
     return (
       <Card>
@@ -140,11 +124,6 @@ const RecentUploads = () => {
                     <p className="text-xs text-gray-500">
                       {getTimeAgo(item.uploadDate)}
                     </p>
-                    {item.confidence && (
-                      <span className="text-xs text-green-600">
-                        {Math.round(item.confidence)}%
-                      </span>
-                    )}
                   </div>
                   {item.status === 'processing' && (
                     <div className="flex items-center space-x-2 mt-1">
@@ -155,12 +134,6 @@ const RecentUploads = () => {
                     </div>
                   )}
                 </div>
-                <Badge
-                  variant={getStatusColor(item.status)}
-                  className="text-xs"
-                >
-                  {item.status}
-                </Badge>
               </div>
             ))}
             <Button

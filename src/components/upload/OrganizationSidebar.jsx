@@ -2,7 +2,6 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { FolderOpen, Plus } from 'lucide-react';
-import QualityTips from './QualityTips';
 
 const OrganizationSidebar = ({
   noteTitle,
@@ -77,22 +76,9 @@ const OrganizationSidebar = ({
               className="text-sm"
             />
           </div>
-
-          <div className="space-y-2">
-            <label htmlFor="privacy-select" className="text-sm font-medium text-gray-700">Privacy</label>
-            <select
-              id="privacy-select"
-              className="w-full p-2 border border-gray-300 rounded-lg text-sm"
-            >
-              <option value="private">🔒 Private</option>
-              <option value="shared">👥 Shared</option>
-              <option value="public">🌐 Public</option>
-            </select>
-          </div>
         </CardContent>
       </Card>
 
-      <QualityTips />
     </div>
   );
 };
