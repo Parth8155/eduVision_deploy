@@ -1,7 +1,7 @@
 // Service for managing PDF annotations (highlights, drawings, etc.)
 import { toast } from 'react-toastify';
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/api';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://eduvision-g0evbghwhyb8apb4.westindia-01.azurewebsites.net/api';
 const ANNOTATIONS_API_URL = `${API_BASE_URL}/annotations`;
 
 class AnnotationsService {
