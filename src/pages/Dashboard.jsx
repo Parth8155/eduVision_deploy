@@ -10,7 +10,6 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Progress } from "@/components/ui/progress";
 import {
   Upload,
   BookOpen,
@@ -27,7 +26,6 @@ import {
   RefreshCw,
 } from "lucide-react";
 import { Link } from "react-router-dom";
-import Navigation from "@/components/Navigation";
 import notesService from "@/services/notesService";
 
 const Dashboard = () => {
@@ -170,7 +168,6 @@ const Dashboard = () => {
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
-        <Navigation />
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <div className="mb-8">
             <div className="w-64 h-8 bg-gray-200 rounded animate-pulse mb-2"></div>

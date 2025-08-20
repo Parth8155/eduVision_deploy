@@ -471,6 +471,16 @@ button:active{
   border-radius: 5%;
 }
 
+/* Animated tree background container */
+.animated-tree-container canvas {
+  opacity: 0.12;
+  transition: opacity 0.4s ease;
+}
+
+.dark .animated-tree-container canvas {
+  opacity: 0.16;
+}
+
 /* Reduced motion support */
 @media (prefers-reduced-motion: reduce) {
   * {

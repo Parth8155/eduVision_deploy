@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import {
@@ -16,6 +16,7 @@ import {
   Clock,
 } from "lucide-react";
 import ThemeToggle from "../components/ui/ThemeToggle";
+import AnimatedTree from "../components/AnimatedTree";
 import authService from "../services/authService";
 
 const Index = () => {
@@ -31,6 +32,32 @@ const Index = () => {
     setUser(null);
     navigate("/");
   };
+
+  // Intersection Observer: trigger animations when elements enter the viewport
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const observer = new IntersectionObserver(
+      (entries, obs) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            entry.target.classList.add("in-view");
+            // for stagger children, also play the slide-up animation
+            if (entry.target.classList.contains("stagger-child")) {
+              entry.target.classList.add("animate-slide-up");
+            }
+            obs.unobserve(entry.target);
+          }
+        });
+      },
+      { threshold: 0.15 }
+    );
+
+    document.querySelectorAll(".animate-on-scroll, .stagger-child").forEach((el) => {
+      observer.observe(el);
+    });
+
+    return () => observer.disconnect();
+  }, []);
 
   const stats = [
     { number: "10,000+", label: "Notes Processed" },
@@ -103,12 +130,12 @@ const Index = () => {
               </span>
             </Link>
 
-            <div className="hidden md:flex items-center space-x-8">
+      <div className="hidden md:flex items-center space-x-8">
               {isAuthenticated ? (
                 <>
                   <Link
                     to="/dashboard"
-                    className="text-gray-600 dark:text-gray-400 hover:text-black dark:hover:text-white transition-colors text-sm"
+        className="text-gray-600 dark:text-gray-400 hover:text-black dark:hover:text-white transition-colors text-sm nav-link"
                   >
                     Dashboard
                   </Link>
@@ -204,16 +231,16 @@ const Index = () => {
       </nav>
 
       {/* Hero Section */}
-      <section className="pt-20 pb-16 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-6xl mx-auto">
+      <section className="pt-20 pb-16 px-4 sm:px-6 lg:px-8 relative overflow-hidden">
+        <AnimatedTree />
+        <div className="max-w-6xl mx-auto relative z-10">
           <div className="text-center mb-16">
-            <h1 className="text-5xl md:text-6xl font-bold mb-6 text-black dark:text-white leading-tight">
+            <h1 className="text-5xl md:text-6xl font-bold mb-6 text-black dark:text-white leading-tight hero-text-reveal animate-slide-down">
               Simplified Study Materials,
               <br />
               Seamless Everywhere
             </h1>
-
-            <p className="text-xl text-gray-600 dark:text-gray-400 mb-8 max-w-3xl mx-auto leading-relaxed">
+            <p className="text-xl text-gray-600 dark:text-gray-400 mb-8 max-w-3xl mx-auto leading-relaxed animate-fade-in animate-slide-up delay-100">
               Upload, process, and manage your handwritten notes—effortlessly.
               With eduVision, you transform traditional studying into an
               intelligent, AI-powered learning experience.
@@ -224,7 +251,7 @@ const Index = () => {
                 <Link to="/upload">
                   <Button
                     size="lg"
-                    className="bg-black dark:bg-white hover:bg-gray-800 dark:hover:bg-gray-200 text-white dark:text-black px-8 py-3 text-base"
+                    className="bg-black dark:bg-white hover:bg-gray-800 dark:hover:bg-gray-200 text-white dark:text-black px-8 py-3 text-base hover-lift animate-scale-in"
                   >
                     Upload Notes
                   </Button>
@@ -233,7 +260,7 @@ const Index = () => {
                 <Link to="/register">
                   <Button
                     size="lg"
-                    className="bg-black dark:bg-white hover:bg-gray-800 dark:hover:bg-gray-200 text-white dark:text-black px-8 py-3 text-base"
+                    className="bg-black dark:bg-white hover:bg-gray-800 dark:hover:bg-gray-200 text-white dark:text-black px-8 py-3 text-base hover-lift animate-scale-in"
                   >
                     Get Started Free
                   </Button>
@@ -252,10 +279,10 @@ const Index = () => {
 
             {/* Feature Cards */}
             <div id="features" className="grid md:grid-cols-3 gap-8 mb-16">
-              {features.map((v) => {
+              {features.map((v, i) => {
                 const Icon = v.icon;
                 return (
-                  <Card className="text-center border border-gray-200 dark:border-gray-700 dark:bg-gray-800 hover:shadow-lg transition-shadow">
+                  <Card className={`text-center border border-gray-200 dark:border-gray-700 dark:bg-gray-800 hover:shadow-lg transition-shadow stagger-child stagger-${(i%6)+1}`}> 
                     <CardHeader className="pb-4">
                       <div className="w-12 h-12 bg-gray-100 dark:bg-gray-700 rounded-lg mx-auto mb-4 flex items-center justify-center">
                         <Icon className="w-6 h-6 text-black dark:text-white" />
@@ -310,10 +337,10 @@ const Index = () => {
             our AI-driven platform
           </p>
 
-          <div className="grid md:grid-cols-4 gap-8">
+            <div className="grid md:grid-cols-4 gap-8">
             {studyFeatures.map((feature, index) => (
-              <div key={index} className="text-center">
-                <div className="w-16 h-16 bg-black dark:bg-white text-white dark:text-black rounded-full flex items-center justify-center mx-auto mb-4">
+              <div key={index} className="text-center animate-on-scroll stagger-child stagger-2">
+                <div className="w-16 h-16 bg-black dark:bg-white text-white dark:text-black rounded-full flex items-center justify-center mx-auto mb-4 hover-lift">
                   <feature.icon className="w-8 h-8" />
                 </div>
                 <h3 className="text-lg font-semibold mb-2 text-black dark:text-white">
@@ -473,7 +500,7 @@ const Index = () => {
             </div>
           </div>
 
-          <div className="border-t border-gray-100 dark:border-gray-800 mt-8 pt-8 text-center text-gray-600 dark:text-gray-400">
+          <div className="border-t border-gray-100 dark:border-gray-800 mt-8 pt-8 text-center text-gray-600 dark:text-gray-400 footer-reveal animate-fade-in">
             <p>&copy; 2024 eduVision. All rights reserved.</p>
           </div>
         </div>
