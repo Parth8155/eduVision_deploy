@@ -50,7 +50,6 @@ class AnnotationsService {
       });
 
       const data = await this.handleResponse(response);
-      toast.success('Annotations saved successfully');
       return data;
     } catch (error) {
       console.error('Save annotations error:', error);

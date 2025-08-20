@@ -25,12 +25,8 @@ const ContentArea = ({
   const [isSaving, setIsSaving] = useState(false);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
-  // Reference to PDF viewer's save function
   const saveAnnotationsRef = useRef(null);
 
-  // When a drawing/annotation tool is active, prevent text selection across the rest
-  // of the app (so other UI like chatbots won't get selected during drag). We allow
-  // selection inside the PDF viewer via a special viewer class.
   useEffect(() => {
     try {
       // Only disable selection for annotation tools, NOT for reading tools

@@ -5,8 +5,6 @@ import {
   Undo,
   Redo,
   Hash,
-  Eye,
-  EyeOff,
   MousePointer,
 } from "lucide-react";
 

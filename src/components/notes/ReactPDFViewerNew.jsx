@@ -586,7 +586,7 @@ function ReactPDFViewerNew(props) {
     return () => window.removeEventListener('keydown', onKey);
   }, []);
 
-  // Load PDF (supports authenticated API URLs)
+  // Load PDF (supports authenticated API URLs) with enhanced error handling
   useEffect(() => {
     let revoked = null;
     const load = async () => {
@@ -599,44 +599,132 @@ function ReactPDFViewerNew(props) {
           return;
         }
 
+        console.log('📖 Loading PDF from URL:', pdfUrl);
+
         if (pdfUrl.includes("/api/files/pdf/")) {
           const token = localStorage.getItem("accessToken");
-          if (!token)
+          if (!token) {
             throw new Error("Authentication required. Please login again.");
+          }
+
+          console.log('🔐 Making authenticated request to PDF API');
           const res = await fetch(pdfUrl, {
             headers: { Authorization: `Bearer ${token}` },
           });
-          if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
+          if (!res.ok) {
+            let errorMessage = `HTTP ${res.status}`;
+            
+            // Try to get more specific error information
+            try {
+              const errorData = await res.json();
+              errorMessage = errorData.message || errorMessage;
+            } catch (jsonError) {
+              // If response is not JSON, use status text
+              errorMessage = res.statusText || errorMessage;
+            }
+
+            if (res.status === 401) {
+              // Clear token and redirect to login
+              localStorage.removeItem("accessToken");
+              errorMessage = "Authentication expired. Please login again.";
+            } else if (res.status === 404) {
+              errorMessage = "PDF file not found. It may have been deleted or moved.";
+            } else if (res.status === 500) {
+              errorMessage = "Server error while loading PDF. The file may be corrupted.";
+            }
+
+            throw new Error(errorMessage);
+          }
+
+          console.log('📥 PDF response received, creating blob');
           const blob = await res.blob();
+          
+          // Validate blob
+          if (blob.size === 0) {
+            throw new Error("PDF file is empty");
+          }
+
+          if (blob.type && !blob.type.includes('pdf')) {
+            console.warn('⚠️ Response content type is not PDF:', blob.type);
+          }
+
           const url = URL.createObjectURL(blob);
+          console.log('✅ PDF blob URL created:', url.substring(0, 50) + '...');
           setFileUrl(url);
           revoked = url;
         } else {
+          console.log('🔗 Using direct PDF URL');
           setFileUrl(pdfUrl);
         }
       } catch (e) {
         const err = e instanceof Error ? e : new Error("Failed to load PDF");
+        console.error('❌ PDF loading error:', err.message);
         setError(err.message);
         onLoadError?.(err);
       } finally {
         setIsLoading(false);
       }
     };
+    
     load();
+    
     return () => {
-      if (revoked) URL.revokeObjectURL(revoked);
+      if (revoked) {
+        console.log('🗑️ Revoking PDF blob URL');
+        URL.revokeObjectURL(revoked);
+      }
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pdfUrl]);
 
-  // Doc loaded
+  // Doc loaded with enhanced error handling
   const handleDocumentLoad = useCallback(
     (e) => {
-      const numPages = e?.doc?.numPages ?? 0;
-      console.log("📄 PDF loaded with", numPages, "pages");
-      onLoadSuccess?.(numPages);
+      try {
+        const numPages = e?.doc?.numPages ?? 0;
+        console.log("📄 PDF loaded successfully with", numPages, "pages");
+        
+        if (numPages === 0) {
+          console.warn("⚠️ PDF loaded but contains no pages");
+          setError("PDF file appears to be empty or corrupted");
+          return;
+        }
+
+        setError(""); // Clear any previous errors
+        onLoadSuccess?.(numPages);
+      } catch (error) {
+        console.error("❌ Error in document load handler:", error);
+        setError("Failed to process loaded PDF");
+        onLoadError?.(error);
+      }
     },
-    [onLoadSuccess]
+    [onLoadSuccess, onLoadError]
+  );
+
+  // Handle PDF loading errors from the viewer
+  const handleDocumentLoadError = useCallback(
+    (error) => {
+      console.error("❌ PDF viewer loading error:", error);
+      
+      let errorMessage = "Failed to load PDF";
+      
+      if (error.message) {
+        if (error.message.includes('Invalid PDF structure')) {
+          errorMessage = "PDF file is corrupted or invalid";
+        } else if (error.message.includes('password')) {
+          errorMessage = "PDF file is password protected";
+        } else if (error.message.includes('network')) {
+          errorMessage = "Network error while loading PDF";
+        } else {
+          errorMessage = error.message;
+        }
+      }
+      
+      setError(errorMessage);
+      onLoadError?.(new Error(errorMessage));
+    },
+    [onLoadError]
   );
 
   // Number annotation placement and eraser handling
@@ -739,8 +827,27 @@ function ReactPDFViewerNew(props) {
 
   if (error) {
     return (
-      <div className={`flex items-center justify-center h-full ${className}`}>
-        <div className="text-red-500">{error}</div>
+      <div className={`flex flex-col items-center justify-center h-full ${className} p-8`}>
+        <div className="max-w-md text-center">
+          <div className="text-red-500 text-6xl mb-4">⚠️</div>
+          <h3 className="text-lg font-semibold text-red-600 mb-2">PDF Loading Error</h3>
+          <p className="text-gray-600 mb-4">{error}</p>
+          <div className="space-y-2 text-sm text-gray-500">
+            <p>This error can occur due to:</p>
+            <ul className="list-disc list-inside text-left space-y-1">
+              <li>Corrupted PDF file</li>
+              <li>Invalid PDF structure</li>
+              <li>Network connectivity issues</li>
+              <li>Authentication problems</li>
+            </ul>
+          </div>
+          <button 
+            onClick={() => window.location.reload()} 
+            className="mt-4 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors"
+          >
+            Retry Loading
+          </button>
+        </div>
       </div>
     );
   }
@@ -762,6 +869,7 @@ function ReactPDFViewerNew(props) {
         <Viewer
           fileUrl={fileUrl}
           onDocumentLoad={handleDocumentLoad}
+          onDocumentLoadError={handleDocumentLoadError}
           plugins={[defaultLayoutPluginInstance, highlightPluginInstance]}
         />
       </Worker>

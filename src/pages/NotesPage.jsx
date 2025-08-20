@@ -227,9 +227,6 @@ const MainLayout = React.memo(() => {
   }, []);
 
   const handleSaveAnnotations = useCallback(() => {
-    // The actual saving is handled by the PDF viewer component
-    // This callback can be used for additional UI feedback
-    console.log('Annotations saved successfully');
   }, []);
 
   const handleCreateNumberAnnotation = useCallback(
