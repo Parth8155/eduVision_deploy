@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import ThemeToggle from "../components/ui/ThemeToggle";
 import AnimatedTree from "../components/AnimatedTree";
+import ErrorBoundary from "../components/ErrorBoundary";
 import authService from "../services/authService";
 
 const Index = () => {
@@ -232,7 +233,9 @@ const Index = () => {
 
       {/* Hero Section */}
       <section className="pt-20 pb-16 px-4 sm:px-6 lg:px-8 relative overflow-hidden">
-        <AnimatedTree />
+        <ErrorBoundary fallback="silent">
+          <AnimatedTree />
+        </ErrorBoundary>
         <div className="max-w-6xl mx-auto relative z-10">
           <div className="text-center mb-16">
             <h1 className="text-5xl md:text-6xl font-bold mb-6 text-black dark:text-white leading-tight hero-text-reveal animate-slide-down">

@@ -6,29 +6,48 @@ export default function AnimatedTree({ className = '' }) {
   const rafRef = useRef(null);
 
   useEffect(() => {
+    // Safety check for browser environment
+    if (typeof window === 'undefined') return;
+    
     const canvas = canvasRef.current;
     if (!canvas) return;
-    const ctx = canvas.getContext('2d');
+    
+    let ctx;
+    try {
+      ctx = canvas.getContext('2d');
+      if (!ctx) return;
+    } catch (error) {
+      console.warn('Failed to get canvas context:', error);
+      return;
+    }
+
     let width = 0;
     let height = 0;
-    let dpr = window.devicePixelRatio || 1;
+    let dpr = (typeof window !== 'undefined' && window.devicePixelRatio) || 1;
     let branches = [];
     let running = true;
 
-    const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const prefersReduced = (typeof window !== 'undefined' && 
+      window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches) || false;
 
     function resize() {
+      if (typeof window === 'undefined' || !ctx) return;
       dpr = window.devicePixelRatio || 1;
       width = canvas.clientWidth;
       height = canvas.clientHeight;
       canvas.width = Math.max(1, Math.floor(width * dpr));
       canvas.height = Math.max(1, Math.floor(height * dpr));
-      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      try {
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      } catch (error) {
+        console.warn('Failed to set canvas transform:', error);
+      }
     }
 
     function themeColor() {
       // if document has .dark class -> white lines, else black lines
-      const isDark = document.documentElement.classList.contains('dark');
+      if (typeof document === 'undefined') return 'rgba(0,0,0,0.85)';
+      const isDark = document.documentElement?.classList?.contains('dark');
       return isDark ? 'rgba(255,255,255,0.85)' : 'rgba(0,0,0,0.85)';
     }
 
@@ -45,10 +64,7 @@ export default function AnimatedTree({ className = '' }) {
 
     function createBranch(x, y, angle, thickness) {
       return {
-        x,
-        y,
-        angle,
-        thickness,
+        x, y, angle, thickness,
         length: 0,
         target: 40 + Math.random() * 80,
         children: [],
@@ -73,85 +89,131 @@ export default function AnimatedTree({ className = '' }) {
         }
       }
       b.age++;
-      // step children
       b.children.forEach(stepBranch);
     }
 
     function drawBranch(b, ctx) {
-      ctx.save();
-      ctx.lineCap = 'round';
-      ctx.strokeStyle = themeColor();
-      ctx.lineWidth = Math.max(0.6, b.thickness * 4);
-      ctx.beginPath();
-      ctx.moveTo(b.x, b.y);
-      const nx = b.x + Math.cos(b.angle) * b.length;
-      const ny = b.y + Math.sin(b.angle) * b.length;
-      ctx.lineTo(nx, ny);
-      ctx.stroke();
-      b.children.forEach((c) => drawBranch(c, ctx));
-      ctx.restore();
+      try {
+        ctx.save();
+        ctx.lineCap = 'round';
+        ctx.strokeStyle = themeColor();
+        ctx.lineWidth = Math.max(0.6, b.thickness * 4);
+        ctx.beginPath();
+        ctx.moveTo(b.x, b.y);
+        const nx = b.x + Math.cos(b.angle) * b.length;
+        const ny = b.y + Math.sin(b.angle) * b.length;
+        ctx.lineTo(nx, ny);
+        ctx.stroke();
+        b.children.forEach((c) => drawBranch(c, ctx));
+        ctx.restore();
+      } catch (error) {
+        console.warn('Failed to draw branch:', error);
+      }
     }
 
     function animate() {
-      if (!running) return;
-      ctx.clearRect(0, 0, width, height);
+      if (!running || !ctx) return;
+      try {
+        ctx.clearRect(0, 0, width, height);
 
-      // subtle vignette background for contrast
-      ctx.save();
-      const g = ctx.createLinearGradient(0, 0, 0, height);
-      const isDark = document.documentElement.classList.contains('dark');
-      if (isDark) {
-        g.addColorStop(0, 'rgba(20,20,20,0.0)');
-        g.addColorStop(1, 'rgba(0,0,0,0.04)');
-      } else {
-        g.addColorStop(0, 'rgba(255,255,255,0.0)');
-        g.addColorStop(1, 'rgba(0,0,0,0.02)');
+        // subtle vignette background for contrast
+        ctx.save();
+        const g = ctx.createLinearGradient(0, 0, 0, height);
+        const isDark = typeof document !== 'undefined' && document.documentElement?.classList?.contains('dark');
+        if (isDark) {
+          g.addColorStop(0, 'rgba(20,20,20,0.0)');
+          g.addColorStop(1, 'rgba(0,0,0,0.04)');
+        } else {
+          g.addColorStop(0, 'rgba(255,255,255,0.0)');
+          g.addColorStop(1, 'rgba(0,0,0,0.02)');
+        }
+        ctx.fillStyle = g;
+        ctx.fillRect(0, 0, width, height);
+        ctx.restore();
+
+        branches.forEach((b) => {
+          stepBranch(b);
+          drawBranch(b, ctx);
+        });
+
+        // occasionally reset for continuous subtle motion
+        if (Math.random() < 0.002) {
+          initBranches();
+        }
+      } catch (error) {
+        console.warn('Animation error:', error);
       }
-      ctx.fillStyle = g;
-      ctx.fillRect(0, 0, width, height);
-      ctx.restore();
 
-      branches.forEach((b) => {
-        stepBranch(b);
-        drawBranch(b, ctx);
-      });
-
-      // occasionally reset for continuous subtle motion
-      if (Math.random() < 0.002) {
-        initBranches();
+      if (!prefersReduced && running) {
+        rafRef.current = requestAnimationFrame(animate);
       }
-
-      if (!prefersReduced) rafRef.current = requestAnimationFrame(animate);
     }
 
     function start() {
       resize();
       initBranches();
-      if (!prefersReduced) rafRef.current = requestAnimationFrame(animate);
+      if (!prefersReduced) {
+        rafRef.current = requestAnimationFrame(animate);
+      }
     }
 
     start();
-    window.addEventListener('resize', resize);
+    
+    if (typeof window !== 'undefined') {
+      window.addEventListener('resize', resize);
+    }
 
     // observe theme changes (toggle .dark on html)
-    const mo = new MutationObserver(() => {
-      // redraw once to update stroke colors
-      ctx.clearRect(0, 0, width, height);
-      branches.forEach((b) => drawBranch(b, ctx));
-    });
-    mo.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
+    let mo;
+    try {
+      if (typeof MutationObserver !== 'undefined' && typeof document !== 'undefined') {
+        mo = new MutationObserver(() => {
+          // redraw once to update stroke colors
+          if (ctx && running) {
+            try {
+              ctx.clearRect(0, 0, width, height);
+              branches.forEach((b) => drawBranch(b, ctx));
+            } catch (error) {
+              console.warn('Failed to redraw canvas:', error);
+            }
+          }
+        });
+        mo.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
+      }
+    } catch (error) {
+      console.warn('MutationObserver not available:', error);
+    }
 
     return () => {
       running = false;
-      window.removeEventListener('resize', resize);
-      mo.disconnect();
-      if (rafRef.current) cancelAnimationFrame(rafRef.current);
+      if (typeof window !== 'undefined') {
+        window.removeEventListener('resize', resize);
+      }
+      if (mo) {
+        try {
+          mo.disconnect();
+        } catch (error) {
+          console.warn('Failed to disconnect observer:', error);
+        }
+      }
+      if (rafRef.current) {
+        try {
+          cancelAnimationFrame(rafRef.current);
+        } catch (error) {
+          console.warn('Failed to cancel animation frame:', error);
+        }
+      }
     };
   }, []);
 
   return (
     <div className={`animated-tree-container ${className}`} style={{ position: 'absolute', inset: 0, zIndex: -1, pointerEvents: 'none' }}>
-      <canvas ref={canvasRef} style={{ width: '100%', height: '100%', display: 'block' }} />
+      <canvas 
+        ref={canvasRef} 
+        style={{ width: '100%', height: '100%', display: 'block' }}
+        aria-hidden="true"
+        role="presentation"
+      />
     </div>
   );
 }
