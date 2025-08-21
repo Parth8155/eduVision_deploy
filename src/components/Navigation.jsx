@@ -18,21 +18,35 @@ const Navigation = () => {
         // First try to get from localStorage (if stored during login)
         const userData = localStorage.getItem('userData');
         if (userData) {
-          const user = JSON.parse(userData);
-          setUserName(user.name || user.firstName || user.email?.split('@')[0] || "User");
-          return;
+          try {
+            const user = JSON.parse(userData);
+            setUserName(user.name || user.firstName || user.email?.split('@')[0] || "User");
+            return;
+          } catch (parseError) {
+            console.warn('Failed to parse userData from localStorage:', parseError);
+          }
         }
 
         // Alternatively, get from token payload
         const token = localStorage.getItem('accessToken');
-        if (token) {
-          // Decode JWT payload (basic decode without verification)
-          const payload = JSON.parse(atob(token.split('.')[1]));
-          setUserName(payload.name || payload.firstName || payload.email?.split('@')[0] || "User");
+        if (token && typeof token === 'string' && token.includes('.')) {
+          try {
+            // Decode JWT payload (basic decode without verification)
+            const parts = token.split('.');
+            if (parts.length === 3) {
+              // Safely decode the payload
+              const payload = JSON.parse(atob(parts[1]));
+              setUserName(payload.name || payload.firstName || payload.email?.split('@')[0] || "User");
+            }
+          } catch (decodeError) {
+            console.warn('Failed to decode token:', decodeError);
+          }
         }
       } catch (error) {
         console.error('Error getting user data:', error);
-        setUserName("User");
+      } finally {
+        // Always set a fallback name
+        setUserName(prevName => prevName || "User");
       }
     };
 

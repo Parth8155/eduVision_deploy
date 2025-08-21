@@ -27,6 +27,8 @@ import {
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import notesService from "@/services/notesService";
+import Navigation from "@/components/Navigation";
+import ErrorBoundary from "@/components/ErrorBoundary";
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -55,6 +57,8 @@ const Dashboard = () => {
         setUserInfo(JSON.parse(storedUser));
       } catch (error) {
         console.error("Error parsing user info:", error);
+        // Clear corrupted data
+        localStorage.removeItem("user");
       }
     }
     loadDashboardData();
@@ -137,10 +141,15 @@ const Dashboard = () => {
   };
 
   const getGreeting = () => {
-    const hour = new Date().getHours();
-    if (hour < 12) return "Good morning";
-    if (hour < 18) return "Good afternoon";
-    return "Good evening";
+    try {
+      const hour = new Date().getHours();
+      if (hour < 12) return "Good morning";
+      if (hour < 18) return "Good afternoon";
+      return "Good evening";
+    } catch (error) {
+      console.warn("Error getting greeting:", error);
+      return "Hello";
+    }
   };
 
   const studyStats = [
@@ -242,7 +251,9 @@ const Dashboard = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-900 dark:to-gray-800">
-      <Navigation />
+      <ErrorBoundary fallback={null} silent={true}>
+        <Navigation />
+      </ErrorBoundary>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
@@ -395,7 +406,14 @@ const Dashboard = () => {
 
                           <div className="text-xs text-gray-500 dark:text-gray-400 mb-2">
                             {note.pages} pages •{" "}
-                            {new Date(note.uploadDate).toLocaleDateString()}
+                            {(() => {
+                              try {
+                                return new Date(note.uploadDate).toLocaleDateString();
+                              } catch (error) {
+                                console.warn("Error formatting date:", error);
+                                return "Date unavailable";
+                              }
+                            })()}
                           </div>
 
                         
