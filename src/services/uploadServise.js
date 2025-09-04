@@ -22,7 +22,6 @@ const uploadService = {
 
     formData.append('title', noteData.title || '');
     formData.append('subject', noteData.subject || '');
-    formData.append('folder', noteData.folder || 'General');
     formData.append('generateOverlay', 'true');
 
     console.log('FormData contents:');

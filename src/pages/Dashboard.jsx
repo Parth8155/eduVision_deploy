@@ -260,6 +260,7 @@ const Dashboard = () => {
         <div className="mb-8">
           <div className="flex items-center justify-between">
             <div>
+              {/* Primary greeting and user info at top */}
               <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
                 {getGreeting()}, {userInfo?.firstName || "there"}! 👋
               </h1>
@@ -267,6 +268,7 @@ const Dashboard = () => {
                 Here's your study progress and recent activity
               </p>
             </div>
+            {/* Refresh action moved to top right */}
             <Button
               onClick={handleRefresh}
               variant="outline"
@@ -281,9 +283,16 @@ const Dashboard = () => {
           </div>
         </div>
 
-        {/* Quick Stats */}
+        {/* Quick Stats - Most important metrics at top */}
         <div className="grid grid-cols-2 md:grid-cols-3 gap-6 mb-8">
-          {studyStats.map((stat, index) => {
+          {/* Primary stat first */}
+          {studyStats
+            .sort((a, b) => {
+              // Sort by priority: Notes Processed > Study Sessions > MCQs Generated
+              const priority = { "Notes Processed": 3, "Study Sessions": 2, "MCQs Generated": 1 };
+              return priority[b.label] - priority[a.label];
+            })
+            .map((stat, index) => {
             const Icon = stat.icon;
             return (
               <Card
@@ -465,12 +474,22 @@ const Dashboard = () => {
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
+                {/* Primary action first */}
                 <Link to="/upload">
                   <Button className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white">
                     <Upload className="w-4 h-4 mr-2" />
                     Upload New Notes
                   </Button>
                 </Link>
+                
+                {/* Secondary actions */}
+                <Link to="/library">
+                  <Button variant="outline" className="w-full">
+                    <Search className="w-4 h-4 mr-2" />
+                    Browse Library
+                  </Button>
+                </Link>
+                
                 <Link to="/study-tools">
                   <Button
                     variant="outline"
@@ -478,12 +497,6 @@ const Dashboard = () => {
                   >
                     <BookOpen className="w-4 h-4 mr-2" />
                     Start Study Session
-                  </Button>
-                </Link>
-                <Link to="/library">
-                  <Button variant="outline" className="w-full">
-                    <Search className="w-4 h-4 mr-2" />
-                    Browse Library
                   </Button>
                 </Link>
               </CardContent>

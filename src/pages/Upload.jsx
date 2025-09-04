@@ -16,7 +16,6 @@ const Upload = () => {
   const [files, setFiles] = useState([]);
   const [selectedSubject, setSelectedSubject] = useState("");
   const [noteTitle, setNoteTitle] = useState("");
-  const [selectedFolder, setSelectedFolder] = useState("");
   const [uploading, setUploading] = useState(false);
 
   const handleDrag = (e) => {
@@ -132,7 +131,6 @@ const Upload = () => {
       const response = await uploadService.uploadFiles(filesToUpload, {
         title: finalTitle,
         subject: finalSubject,
-        folder: selectedFolder || "General",
       });
       if (response.success) {
         toast.success(`Note "${finalTitle}" created successfully!`);
@@ -146,7 +144,6 @@ const Upload = () => {
         setTimeout(() => {
           setNoteTitle("");
           setSelectedSubject("");
-          setSelectedFolder("");
           setFiles([]);
         }, 2000);
       } else {
@@ -310,8 +307,6 @@ const Upload = () => {
               setNoteTitle={setNoteTitle}
               selectedSubject={selectedSubject}
               setSelectedSubject={setSelectedSubject}
-              selectedFolder={selectedFolder}
-              setSelectedFolder={setSelectedFolder}
             />
           </div>
         </div>

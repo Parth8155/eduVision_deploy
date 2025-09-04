@@ -94,40 +94,8 @@ const FileQueue = ({ files, onRemoveFile, onRetryFile }) => {
 
                 {/* File Info */}
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center justify-between mb-2">
-                    <h4 className="text-sm font-medium text-gray-900 truncate">
-                      {file.name}
-                    </h4>
-                    <div className="flex items-center gap-2">
-                      {getStatusIcon(file.status)}
-                      <span className="text-sm text-gray-600">
-                        {getStatusText(file.status)}
-                      </span>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center justify-between text-xs text-gray-500 mb-2">
-                    <span>{(file.size / 1024 / 1024).toFixed(1)} MB</span>
-                    {file.confidence && (
-                      <span className="text-green-600">
-                        OCR Confidence: {file.confidence}%
-                      </span>
-                    )}
-                  </div>
-
-                  {/* Progress Bar */}
-                  {(file.status === 'uploading' || file.status === 'processing') && (
-                    <div className="mb-2">
-                      <Progress value={file.progress} className="h-1.5" />
-                      <div className="text-xs text-gray-500 mt-1">
-                        {file.status === 'uploading' ? 'Uploading...' : 'Processing with AI...'}
-                        {file.progress}%
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Actions */}
-                  <div className="flex items-center gap-2 mt-2">
+                  {/* Actions - Moved to top */}
+                  <div className="flex items-center gap-2 mb-3">
                     {file.status === 'error' && (
                       <Button
                         variant="outline"
@@ -157,6 +125,40 @@ const FileQueue = ({ files, onRemoveFile, onRetryFile }) => {
                     >
                       <X className="w-3 h-3" />
                     </Button>
+                  </div>
+
+                  {/* Progress Bar - Moved up */}
+                  {(file.status === 'uploading' || file.status === 'processing') && (
+                    <div className="mb-3">
+                      <Progress value={file.progress} className="h-1.5" />
+                      <div className="text-xs text-gray-500 mt-1">
+                        {file.status === 'uploading' ? 'Uploading...' : 'Processing with AI...'}
+                        {file.progress}%
+                      </div>
+                    </div>
+                  )}
+
+                  {/* File name and status */}
+                  <div className="flex items-center justify-between mb-2">
+                    <h4 className="text-sm font-medium text-gray-900 truncate">
+                      {file.name}
+                    </h4>
+                    <div className="flex items-center gap-2">
+                      {getStatusIcon(file.status)}
+                      <span className="text-sm text-gray-600">
+                        {getStatusText(file.status)}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* File size and OCR confidence - Moved to bottom */}
+                  <div className="flex items-center justify-between text-xs text-gray-500">
+                    <span>{(file.size / 1024 / 1024).toFixed(1)} MB</span>
+                    {file.confidence && (
+                      <span className="text-green-600">
+                        OCR Confidence: {file.confidence}%
+                      </span>
+                    )}
                   </div>
                 </div>
               </div>

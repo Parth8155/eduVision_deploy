@@ -93,7 +93,9 @@ const RecentUploads = () => {
     <Card>
       <CardHeader>
         <div className="flex items-center justify-between">
+          {/* Title on left */}
           <CardTitle className="text-lg">Recent Uploads</CardTitle>
+          {/* Refresh button on right */}
           <Button
             variant="ghost"
             size="sm"
@@ -113,29 +115,36 @@ const RecentUploads = () => {
                 className="flex items-center space-x-3 p-2 hover:bg-gray-50 rounded-lg cursor-pointer transition-colors"
                 onClick={() => handleItemClick(item)}
               >
-                <div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center">
+                {/* Icon moved to left */}
+                <div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center flex-shrink-0">
                   <FileText className="w-5 h-5 text-gray-400" />
                 </div>
+                
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-gray-900 truncate">
+                  {/* Title moved to top */}
+                  <p className="text-sm font-medium text-gray-900 truncate mb-1">
                     {item.title}
                   </p>
-                  <div className="flex items-center justify-between">
-                    <p className="text-xs text-gray-500">
-                      {getTimeAgo(item.uploadDate)}
-                    </p>
-                  </div>
+                  
+                  {/* Processing status moved up if applicable */}
                   {item.status === 'processing' && (
-                    <div className="flex items-center space-x-2 mt-1">
+                    <div className="flex items-center space-x-2 mb-2">
                       <div className="w-full bg-gray-200 rounded-full h-1">
                         <div className="bg-blue-600 h-1 rounded-full animate-pulse" style={{ width: '60%' }}></div>
                       </div>
                       <span className="text-xs text-gray-500">60%</span>
                     </div>
                   )}
+                  
+                  {/* Time info moved to bottom */}
+                  <p className="text-xs text-gray-500">
+                    {getTimeAgo(item.uploadDate)}
+                  </p>
                 </div>
               </div>
             ))}
+            
+            {/* View all button moved to bottom */}
             <Button
               variant="outline"
               size="sm"

@@ -171,7 +171,7 @@ const StudyTools = () => {
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-3 dark:bg-gray-800">
+          <TabsList className="grid w-full grid-cols-2 dark:bg-gray-800">
             <TabsTrigger value="mcq" className="flex items-center space-x-2">
               <CheckCircle className="w-4 h-4" />
               <span>MCQs {generatedMCQs.length > 0 && <span className="ml-1 text-xs bg-blue-500 text-white px-1 rounded">NEW</span>}</span>
@@ -180,10 +180,7 @@ const StudyTools = () => {
               <BookOpen className="w-4 h-4" />
               <span>Summaries {generatedSummaries.length > 0 && <span className="ml-1 text-xs bg-blue-500 text-white px-1 rounded">NEW</span>}</span>
             </TabsTrigger>
-            <TabsTrigger value="practice" className="flex items-center space-x-2">
-              <HelpCircle className="w-4 h-4" />
-              <span>Practice Questions</span>
-            </TabsTrigger>
+            
           </TabsList>
 
           <TabsContent value="mcq">

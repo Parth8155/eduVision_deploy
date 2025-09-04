@@ -74,37 +74,6 @@ const notesService = {
     }
   },
 
-  async getUserFolders() {
-    const token = this.getAuthToken();
-    if (!token) {
-      throw new Error('Authentication required. Please login first.');
-    }
-
-    try {
-      const response = await fetch(`${API_BASE_URL}/notes/folders`, {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-      });
-
-      if (!response.ok) {
-        if (response.status === 401) {
-          localStorage.removeItem('accessToken');
-          window.location.href = '/login';
-          throw new Error('Session expired. Please login again.');
-        }
-        throw new Error(`Failed to fetch folders: ${response.statusText}`);
-      }
-
-      return await response.json();
-    } catch (error) {
-      console.error('Get user folders error:', error);
-      throw error;
-    }
-  },
-
   async createSubject(name) {
     const token = this.getAuthToken();
     if (!token) {
@@ -134,39 +103,6 @@ const notesService = {
       return await response.json();
     } catch (error) {
       console.error('Create subject error:', error);
-      throw error;
-    }
-  },
-
-  async createFolder(name, subject) {
-    const token = this.getAuthToken();
-    if (!token) {
-      throw new Error('Authentication required. Please login first.');
-    }
-
-    try {
-      const response = await fetch(`${API_BASE_URL}/notes/folders`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ name, subject }),
-      });
-
-      if (!response.ok) {
-        if (response.status === 401) {
-          localStorage.removeItem('accessToken');
-          window.location.href = '/login';
-          throw new Error('Session expired. Please login again.');
-        }
-        const errorData = await response.json();
-        throw new Error(errorData.message || `Failed to create folder: ${response.statusText}`);
-      }
-
-      return await response.json();
-    } catch (error) {
-      console.error('Create folder error:', error);
       throw error;
     }
   },

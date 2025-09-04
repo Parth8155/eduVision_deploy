@@ -11,7 +11,6 @@ import {
   Grid3X3,
   List,
   SortAsc,
-  Folder,
   FileText,
   Calendar,
   MoreHorizontal,
@@ -198,7 +197,6 @@ const Library = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedFilter, setSelectedFilter] = useState("all");
   const [selectedSubject, setSelectedSubject] = useState("");
-  const [selectedFolder, setSelectedFolder] = useState("");
   const [contextMenu, setContextMenu] = useState(null);
 
   // API State
@@ -213,7 +211,6 @@ const Library = () => {
     hasPrev: false,
   });
   const [subjects, setSubjects] = useState([]);
-  const [folders, setFolders] = useState([]);
   const [refreshing, setRefreshing] = useState(false);
   const [generatingContent, setGeneratingContent] = useState(null);
 
@@ -234,11 +231,11 @@ const Library = () => {
     loadUserData();
   }, [navigate]);
 
-  // Load user data (notes, subjects, folders)
+  // Load user data (notes, subjects)
   const loadUserData = async () => {
     try {
       setLoading(true);
-      await Promise.all([loadNotes(), loadStudyMaterials(), loadSubjects(), loadFolders()]);
+      await Promise.all([loadNotes(), loadStudyMaterials(), loadSubjects()]);
     } catch (error) {
       console.error("Error loading user data:", error);
       toast.error("Failed to load library data");
@@ -259,6 +256,7 @@ const Library = () => {
         ...(selectedFilter !== "all" &&
           selectedFilter !== "starred" &&
           selectedFilter !== "recent" && { type: selectedFilter }),
+        ...(selectedSubject && { subject: selectedSubject }),
       };
 
       const response = await notesService.getUserNotes(params);
@@ -291,19 +289,10 @@ const Library = () => {
   const loadSubjects = async () => {
     try {
       const response = await notesService.getUserSubjects();
-      setSubjects(response.data.subjects);
+      setSubjects(response.data.subjects || []);
     } catch (error) {
       console.error("Error loading subjects:", error);
-    }
-  };
-
-  // Load user's folders
-  const loadFolders = async () => {
-    try {
-      const response = await notesService.getUserFolders();
-      setFolders(response.data.folders);
-    } catch (error) {
-      console.error("Error loading folders:", error);
+      setSubjects([]);
     }
   };
 
@@ -326,7 +315,7 @@ const Library = () => {
     }, 500);
 
     return () => clearTimeout(delayedSearch);
-  }, [searchQuery, selectedFilter, selectedSubject, selectedFolder, sortBy, sortOrder]);
+  }, [searchQuery, selectedFilter, selectedSubject, sortBy, sortOrder]);
 
   useEffect(() => {
     loadNotes(currentPage);
@@ -376,15 +365,9 @@ const Library = () => {
       allItems = allItems.filter((item) => item.subject === selectedSubject);
     }
 
-    // Apply folder filter
-    if (selectedFolder) {
-      const [folderName, subjectName] = selectedFolder.split('-');
-      allItems = allItems.filter((item) => item.folder === folderName && item.subject === subjectName);
-    }
-
     // Apply type filters
     if (selectedFilter === "starred") {
-      return allItems.filter((item) => item.starred);
+      return allItems.filter((item) => item.starred || item.isStarred);
     }
     if (selectedFilter === "recent") {
       const threeDaysAgo = new Date();
@@ -428,10 +411,8 @@ const Library = () => {
   };
 
   const handleOpenStudyMaterial = (item) => {
-    // Update stats (increment view count)
-    studyToolsService.getStudyMaterialById(item._id);
-    
     // Navigate to StudyTools page with specific study material
+    // The view count will be incremented when StudyTools loads the material
     navigate('/study-tools', {
       state: {
         activeTab: item.type,
@@ -516,7 +497,6 @@ const Library = () => {
         setNotes((prev) => prev.filter((note) => note._id !== item._id));
         toast.success("Note deleted successfully");
         loadSubjects();
-        loadFolders();
       }
     } catch (error) {
       console.error("Error deleting item:", error);
@@ -552,9 +532,8 @@ const Library = () => {
         
         toast.success(`Generated ${studyMaterial.metadata.questionCount} MCQs for ${item.title}`);
         
-        // Reload subjects and folders to update counts
+        // Reload subjects to update counts
         loadSubjects();
-        loadFolders();
       } else {
         toast.error("Failed to generate MCQs. Please try again.");
       }
@@ -594,9 +573,8 @@ const Library = () => {
         
         toast.success(`Generated summary for ${item.title}`);
         
-        // Reload subjects and folders to update counts
+        // Reload subjects to update counts
         loadSubjects();
-        loadFolders();
       } else {
         toast.error("Failed to generate summary. Please try again.");
       }
@@ -608,26 +586,13 @@ const Library = () => {
     }
   };
 
-  // Handle subject and folder clicks
+  // Handle subject clicks
   const handleSubjectClick = (subjectName) => {
     if (selectedSubject === subjectName) {
       // If already selected, clear the filter
       setSelectedSubject("");
     } else {
       setSelectedSubject(subjectName);
-      setSelectedFolder(""); // Clear folder filter when selecting subject
-      setSelectedFilter("all"); // Reset other filters
-    }
-  };
-
-  const handleFolderClick = (folderName, subjectName) => {
-    const folderKey = `${folderName}-${subjectName}`;
-    if (selectedFolder === folderKey) {
-      // If already selected, clear the filter
-      setSelectedFolder("");
-    } else {
-      setSelectedFolder(folderKey);
-      setSelectedSubject(""); // Clear subject filter when selecting folder
       setSelectedFilter("all"); // Reset other filters
     }
   };
@@ -714,7 +679,12 @@ const Library = () => {
                 Organize and access all your study materials in one place
               </p>
             </div>
+            {/* Primary actions moved to top right */}
             <div className="flex items-center space-x-2">
+              <Button onClick={() => navigate("/upload")}>
+                <Plus className="w-4 h-4 mr-2" />
+                Upload Notes
+              </Button>
               <Button
                 onClick={handleRefresh}
                 variant="outline"
@@ -725,10 +695,6 @@ const Library = () => {
                   className={`w-4 h-4 mr-2 ${refreshing ? "animate-spin" : ""}`}
                 />
                 Refresh
-              </Button>
-              <Button onClick={() => navigate("/upload")}>
-                <Plus className="w-4 h-4 mr-2" />
-                Upload Notes
               </Button>
             </div>
           </div>
@@ -785,6 +751,7 @@ const Library = () => {
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-2">
+                {/* Most used filters at top */}
                 <Button
                   variant={selectedFilter === "all" ? "default" : "ghost"}
                   size="sm"
@@ -796,26 +763,69 @@ const Library = () => {
                     {filterCounts.all}
                   </Badge>
                 </Button>
-                {Object.entries({
-                  recent: filterCounts.recent,
-                  notes: filterCounts.notes,
-                  summary: filterCounts.summary,
-                  mcq: filterCounts.mcq,
-                  practice: filterCounts.practice,
-                }).map(([key, count]) => (
-                  <Button
-                    key={key}
-                    variant={selectedFilter === key ? "default" : "ghost"}
-                    size="sm"
-                    className="w-full justify-between"
-                    onClick={() => setSelectedFilter(key)}
-                  >
-                    <span>{key.charAt(0).toUpperCase() + key.slice(1)}</span>
-                    <Badge variant="secondary" className="text-xs">
-                      {count}
-                    </Badge>
-                  </Button>
-                ))}
+                
+                {/* Recent items - high priority */}
+                <Button
+                  variant={selectedFilter === "recent" ? "default" : "ghost"}
+                  size="sm"
+                  className="w-full justify-between"
+                  onClick={() => setSelectedFilter("recent")}
+                >
+                  <span>Recent</span>
+                  <Badge variant="secondary" className="text-xs">
+                    {filterCounts.recent}
+                  </Badge>
+                </Button>
+                
+                {/* Core content types */}
+                <Button
+                  variant={selectedFilter === "notes" ? "default" : "ghost"}
+                  size="sm"
+                  className="w-full justify-between"
+                  onClick={() => setSelectedFilter("notes")}
+                >
+                  <span>Notes</span>
+                  <Badge variant="secondary" className="text-xs">
+                    {filterCounts.notes}
+                  </Badge>
+                </Button>
+                
+                {/* Generated content - secondary priority */}
+                <Button
+                  variant={selectedFilter === "summary" ? "default" : "ghost"}
+                  size="sm"
+                  className="w-full justify-between"
+                  onClick={() => setSelectedFilter("summary")}
+                >
+                  <span>Summaries</span>
+                  <Badge variant="secondary" className="text-xs">
+                    {filterCounts.summary}
+                  </Badge>
+                </Button>
+                
+                <Button
+                  variant={selectedFilter === "mcq" ? "default" : "ghost"}
+                  size="sm"
+                  className="w-full justify-between"
+                  onClick={() => setSelectedFilter("mcq")}
+                >
+                  <span>MCQs</span>
+                  <Badge variant="secondary" className="text-xs">
+                    {filterCounts.mcq}
+                  </Badge>
+                </Button>
+                
+                <Button
+                  variant={selectedFilter === "practice" ? "default" : "ghost"}
+                  size="sm"
+                  className="w-full justify-between"
+                  onClick={() => setSelectedFilter("practice")}
+                >
+                  <span>Practice</span>
+                  <Badge variant="secondary" className="text-xs">
+                    {filterCounts.practice}
+                  </Badge>
+                </Button>
               </CardContent>
             </Card>
 
@@ -825,94 +835,32 @@ const Library = () => {
                 <CardTitle className="text-lg dark:text-white">
                   Subjects
                 </CardTitle>
+                <p className="text-xs text-gray-500 dark:text-gray-400">
+                  Filter by subject
+                </p>
               </CardHeader>
-              <CardContent className="space-y-3">
-                {subjects.map((subject, index) => (
-                  <div
-                    key={subject._id}
-                    className={`flex items-center space-x-3 p-2 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg cursor-pointer transition-colors ${
-                      selectedSubject === subject._id 
-                        ? 'bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800' 
-                        : ''
-                    }`}
-                    onClick={() => handleSubjectClick(subject._id)}
-                  >
-                    <div
-                      className={`w-4 h-4 rounded`}
-                      style={{ backgroundColor: getSubjectColor(subject._id) }}
-                    ></div>
-                    <div className="flex-1 min-w-0">
-                      <p className={`text-sm font-medium truncate ${
-                        selectedSubject === subject._id 
-                          ? 'text-blue-900 dark:text-blue-100' 
-                          : 'text-gray-900 dark:text-white'
-                      }`}>
-                        {subject._id}
-                      </p>
-                    </div>
-                    <Badge variant={selectedSubject === subject._id ? "default" : "secondary"} className="text-xs">
-                      {subject.count}
-                    </Badge>
-                  </div>
-                ))}
-                {subjects.length === 0 && (
+              <CardContent className="space-y-2">
+                {subjects.length > 0 ? (
+                  subjects.map((subject) => (
+                    <Button
+                      key={subject.name}
+                      variant={selectedSubject === subject.name ? "default" : "ghost"}
+                      size="sm"
+                      className="w-full justify-between"
+                      onClick={() => handleSubjectClick(subject.name)}
+                    >
+                      <span className="flex items-center">
+                        <BookOpen className="w-4 h-4 mr-2" />
+                        {subject.name}
+                      </span>
+                      <Badge variant="secondary" className="text-xs">
+                        {subject.count || 0}
+                      </Badge>
+                    </Button>
+                  ))
+                ) : (
                   <p className="text-sm text-gray-500 dark:text-gray-400 text-center py-4">
                     No subjects yet. Upload some notes to get started!
-                  </p>
-                )}
-              </CardContent>
-            </Card>
-
-            {/* Folders */}
-            <Card className="dark:bg-gray-800 dark:border-gray-700">
-              <CardHeader>
-                <CardTitle className="text-lg dark:text-white">
-                  Folders
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                {folders.map((folder, index) => {
-                  const folderKey = `${folder._id.folder}-${folder._id.subject}`;
-                  return (
-                    <div
-                      key={folderKey}
-                      className={`flex items-center space-x-3 p-2 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg cursor-pointer transition-colors ${
-                        selectedFolder === folderKey 
-                          ? 'bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800' 
-                          : ''
-                      }`}
-                      onClick={() => handleFolderClick(folder._id.folder, folder._id.subject)}
-                    >
-                      <Folder className={`w-4 h-4 ${
-                        selectedFolder === folderKey 
-                          ? 'text-blue-600 dark:text-blue-400' 
-                          : 'text-gray-600 dark:text-gray-400'
-                      }`} />
-                      <div className="flex-1 min-w-0">
-                        <p className={`text-sm font-medium truncate ${
-                          selectedFolder === folderKey 
-                            ? 'text-blue-900 dark:text-blue-100' 
-                            : 'text-gray-900 dark:text-white'
-                        }`}>
-                          {folder._id.folder}
-                        </p>
-                        <p className={`text-xs ${
-                          selectedFolder === folderKey 
-                            ? 'text-blue-700 dark:text-blue-300' 
-                            : 'text-gray-500 dark:text-gray-400'
-                        }`}>
-                          {folder._id.subject}
-                        </p>
-                      </div>
-                      <Badge variant={selectedFolder === folderKey ? "default" : "secondary"} className="text-xs">
-                        {folder.count}
-                      </Badge>
-                    </div>
-                  );
-                })}
-                {folders.length === 0 && (
-                  <p className="text-sm text-gray-500 dark:text-gray-400 text-center py-4">
-                    No folders yet.
                   </p>
                 )}
               </CardContent>
@@ -962,7 +910,7 @@ const Library = () => {
                   Showing {filteredItems.length} of {pagination.totalNotes + studyMaterials.length} items
                 </p>
                 {/* Active Filters Display */}
-                {(selectedSubject || selectedFolder || selectedFilter !== "all") && (
+                {(selectedSubject || selectedFilter !== "all") && (
                   <div className="flex items-center space-x-2">
                     <span className="text-xs text-gray-500 dark:text-gray-400">Filters:</span>
                     {selectedSubject && (
@@ -972,15 +920,6 @@ const Library = () => {
                         onClick={() => setSelectedSubject("")}
                       >
                         Subject: {selectedSubject} ×
-                      </Badge>
-                    )}
-                    {selectedFolder && (
-                      <Badge 
-                        variant="secondary" 
-                        className="text-xs cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600"
-                        onClick={() => setSelectedFolder("")}
-                      >
-                        Folder: {selectedFolder.split('-')[0]} ×
                       </Badge>
                     )}
                     {selectedFilter !== "all" && (
@@ -998,7 +937,6 @@ const Library = () => {
                       className="text-xs h-6 px-2"
                       onClick={() => {
                         setSelectedSubject("");
-                        setSelectedFolder("");
                         setSelectedFilter("all");
                       }}
                     >
@@ -1034,7 +972,8 @@ const Library = () => {
                         {viewMode === "grid" ? (
                           <>
                             <CardHeader className="pb-3">
-                              <div className="flex items-start justify-between">
+                              {/* Actions moved to top */}
+                              <div className="flex items-center justify-between mb-3">
                                 <div className="flex items-center space-x-2">
                                   <TypeIcon className="w-4 h-4 text-gray-600 dark:text-gray-400" />
                                   <Badge variant="outline" className="text-xs">
@@ -1069,22 +1008,28 @@ const Library = () => {
                                   </Button>
                                 </div>
                               </div>
-                              <div className="aspect-video bg-gray-100 dark:bg-gray-700 rounded-lg flex items-center justify-center">
+
+                              {/* Title moved up */}
+                              <h3 className="font-semibold text-gray-900 dark:text-white mb-3 line-clamp-2">
+                                {item.title}
+                              </h3>
+
+                              {/* Preview image */}
+                              <div className="aspect-video bg-gray-100 dark:bg-gray-700 rounded-lg flex items-center justify-center mb-3">
                                 <FileText className="w-8 h-8 text-gray-400 dark:text-gray-500" />
                               </div>
                             </CardHeader>
                             <CardContent>
-                              <h3 className="font-semibold text-gray-900 dark:text-white mb-2 line-clamp-2">
-                                {item.title}
-                              </h3>
+                              {/* Subject badge moved up */}
                               <div className="flex items-center space-x-2 mb-3">
                                 <Badge variant="secondary" className="text-xs">
                                   {item.subject}
                                 </Badge>
-                                
                               </div>
-                              <div className="text-xs text-gray-500 dark:text-gray-400 mb-3">
-                                <div className="flex items-center space-x-4">
+
+                              {/* Metadata moved to bottom */}
+                              <div className="text-xs text-gray-500 dark:text-gray-400">
+                                <div className="flex items-center space-x-4 mb-2">
                                   <span className="flex items-center space-x-1">
                                     <FileText className="w-3 h-3" />
                                     <span>{item.pages} pages</span>
@@ -1094,7 +1039,7 @@ const Library = () => {
                                     <span>{item.views} views</span>
                                   </span>
                                 </div>
-                                <div className="flex items-center space-x-1 mt-1">
+                                <div className="flex items-center space-x-1 mb-2">
                                   <Calendar className="w-3 h-3" />
                                   <span>
                                     Updated{" "}
@@ -1103,48 +1048,66 @@ const Library = () => {
                                     ).toLocaleDateString()}
                                   </span>
                                 </div>
+                                {item.status === "completed" && item.accuracy && (
+                                  <div className="flex items-center justify-between">
+                                    <span className="text-green-600 dark:text-green-400">
+                                      {item.accuracy}% accuracy
+                                    </span>
+                                    <span>
+                                      {item.generatedItems?.mcqs || 0} MCQs •{" "}
+                                      {item.generatedItems?.questions || 0} Q&A
+                                    </span>
+                                  </div>
+                                )}
                               </div>
-                              {item.status === "completed" && item.accuracy && (
-                                <div className="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
-                                  <span className="text-green-600 dark:text-green-400">
-                                    {item.accuracy}% accuracy
-                                  </span>
-                                  <span>
-                                    {item.generatedItems?.mcqs || 0} MCQs •{" "}
-                                    {item.generatedItems?.questions || 0} Q&A
-                                  </span>
-                                </div>
-                              )}
                             </CardContent>
                           </>
                         ) : (
                           <>
                             <div className="flex items-center space-x-4 flex-1">
-                              <div className="w-16 h-12 bg-gray-100 dark:bg-gray-700 rounded flex items-center justify-center">
+                              {/* Icon moved to left */}
+                              <div className="w-16 h-12 bg-gray-100 dark:bg-gray-700 rounded flex items-center justify-center flex-shrink-0">
                                 <TypeIcon className="w-5 h-5 text-gray-600 dark:text-gray-400" />
                               </div>
+                              
                               <div className="flex-1 min-w-0">
-                                <div className="flex items-center space-x-2 mb-1">
-                                  <h3 className="font-semibold text-gray-900 dark:text-white truncate">
-                                    {item.title}
-                                  </h3>
+                                {/* Actions and title moved to top */}
+                                <div className="flex items-center justify-between mb-2">
+                                  <div className="flex items-center space-x-2 flex-1 min-w-0">
+                                    <h3 className="font-semibold text-gray-900 dark:text-white truncate">
+                                      {item.title}
+                                    </h3>
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleToggleStar(item);
+                                      }}
+                                      className="p-1 flex-shrink-0"
+                                    >
+                                      <Star className={`w-4 h-4 ${
+                                        item.starred 
+                                          ? 'text-yellow-500 fill-current' 
+                                          : 'text-gray-400'
+                                      }`} />
+                                    </Button>
+                                  </div>
                                   <Button
                                     variant="ghost"
                                     size="sm"
                                     onClick={(e) => {
                                       e.stopPropagation();
-                                      handleToggleStar(item);
+                                      handleItemRightClick(e, item);
                                     }}
-                                    className="p-1"
+                                    className="flex-shrink-0"
                                   >
-                                    <Star className={`w-4 h-4 ${
-                                      item.starred 
-                                        ? 'text-yellow-500 fill-current' 
-                                        : 'text-gray-400'
-                                    }`} />
+                                    <MoreHorizontal className="w-4 h-4" />
                                   </Button>
                                 </div>
-                                <div className="flex items-center space-x-2 mb-1">
+
+                                {/* Badges moved up */}
+                                <div className="flex items-center space-x-2 mb-2">
                                   <Badge
                                     variant="secondary"
                                     className="text-xs"
@@ -1165,6 +1128,8 @@ const Library = () => {
                                     {item.status}
                                   </Badge>
                                 </div>
+
+                                {/* Metadata moved to bottom */}
                                 <div className="flex items-center space-x-4 text-xs text-gray-500 dark:text-gray-400">
                                   <span>{item.pages} pages</span>
                                   <span>{item.views} views</span>
@@ -1182,16 +1147,6 @@ const Library = () => {
                                     )}
                                 </div>
                               </div>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleItemRightClick(e, item);
-                                }}
-                              >
-                                <MoreHorizontal className="w-4 h-4" />
-                              </Button>
                             </div>
                           </>
                         )}
@@ -1272,6 +1227,11 @@ const Library = () => {
 
 // Helper function to generate consistent colors for subjects
 function getSubjectColor(subject) {
+  // Handle undefined or null subject
+  if (!subject || typeof subject !== 'string') {
+    return "#3B82F6"; // Default color
+  }
+
   const colors = [
     "#3B82F6",
     "#EF4444",
