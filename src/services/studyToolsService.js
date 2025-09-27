@@ -1,4 +1,4 @@
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://eduvision-g0evbghwhyb8apb4.westindia-01.azurewebsites.net/api';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://github.com/Parth8155/eduVision_deploy.git/api';
 
 const studyToolsService = {
   getAuthToken() {
