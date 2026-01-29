@@ -26,6 +26,7 @@ import {
 } from "lucide-react";
 import Navigation from "@/components/Navigation";
 import notesService from "@/services/notesService";
+import authService from "@/services/authService";
 import studyToolsService from "@/services/studyToolsService";
 
 const ContextMenu = ({
@@ -221,14 +222,16 @@ const Library = () => {
 
   // Check if user is authenticated
   useEffect(() => {
-    const token = notesService.getAuthToken();
-    if (!token) {
-      toast.error("Please login to access your library");
-      navigate("/login");
-      return;
-    }
-
-    loadUserData();
+    const initAuthAndLoad = async () => {
+      const isValid = await authService.initializeAuth();
+      if (!isValid) {
+        toast.error("Please login to access your library");
+        navigate("/login");
+        return;
+      }
+      loadUserData();
+    };
+    initAuthAndLoad();
   }, [navigate]);
 
   // Load user data (notes, subjects)

@@ -5,6 +5,7 @@ import Sidebar from "../components/notes/Sidebar";
 import ContentArea from "../components/notes/ContentArea";
 import NotesPanel from "../components/notes/NotesPanel";
 import notesService from "@/services/notesService";
+import authService from "@/services/authService";
 
 const MainLayout = React.memo(() => {
   const location = useLocation();
@@ -81,12 +82,15 @@ const MainLayout = React.memo(() => {
   }, []);
 
   useEffect(() => {
-    const token = notesService.getAuthToken();
-    if (!token) {
-      toast.error("Please login to access notes");
-      navigate("/login");
-      return;
-    }
+    const initAuth = async () => {
+      const isValid = await authService.initializeAuth();
+      if (!isValid) {
+        toast.error("Please login to access notes");
+        navigate("/login");
+        return;
+      }
+    };
+    initAuth();
   }, [navigate]);
 
   const pdfUrl = useMemo(() => {

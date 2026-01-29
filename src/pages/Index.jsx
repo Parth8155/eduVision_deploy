@@ -34,6 +34,20 @@ const Index = () => {
     navigate("/");
   };
 
+  // Initialize authentication on component mount
+  useEffect(() => {
+    const initAuth = async () => {
+      const isValid = await authService.initializeAuth();
+      setIsAuthenticated(isValid);
+      if (isValid) {
+        setUser(authService.getCurrentUser());
+      } else {
+        setUser(null);
+      }
+    };
+    initAuth();
+  }, []);
+
   // Intersection Observer: trigger animations when elements enter the viewport
   useEffect(() => {
     if (typeof window === "undefined") return;

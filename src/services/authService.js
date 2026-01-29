@@ -134,6 +134,38 @@ const authService = {
     return !!this.getAccessToken();
   },
 
+  // Initialize authentication on app startup
+  async initializeAuth() {
+    const token = this.getAccessToken();
+    if (token) {
+      try {
+        // Try to refresh the token to verify it's still valid
+        const newToken = await this.refreshToken();
+        if (newToken) {
+          // Token refreshed successfully, setup auto-refresh
+          this.setupTokenRefresh();
+          return true;
+        } else {
+          // Refresh failed, clear stored data
+          this.clearAuthData();
+          return false;
+        }
+      } catch (error) {
+        console.error('Token refresh failed on initialization:', error);
+        // Clear stored data if refresh fails
+        this.clearAuthData();
+        return false;
+      }
+    }
+    return false;
+  },
+
+  // Clear authentication data
+  clearAuthData() {
+    localStorage.removeItem('accessToken');
+    localStorage.removeItem('user');
+  },
+
   // Auto-refresh token before it expires
   setupTokenRefresh() {
     const token = this.getAccessToken();

@@ -27,6 +27,7 @@ import {
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import notesService from "@/services/notesService";
+import authService from "@/services/authService";
 import Navigation from "@/components/Navigation";
 import ErrorBoundary from "@/components/ErrorBoundary";
 
@@ -45,23 +46,30 @@ const Dashboard = () => {
   });
 
   useEffect(() => {
-    const token = notesService.getAuthToken();
-    if (!token) {
-      toast.error("Please login to access the dashboard");
-      navigate("/login");
-      return;
-    }
-    const storedUser = localStorage.getItem("user");
-    if (storedUser) {
-      try {
-        setUserInfo(JSON.parse(storedUser));
-      } catch (error) {
-        console.error("Error parsing user info:", error);
-        // Clear corrupted data
-        localStorage.removeItem("user");
+    const initAuthAndLoad = async () => {
+      // First initialize authentication
+      const isValid = await authService.initializeAuth();
+      if (!isValid) {
+        toast.error("Please login to access the dashboard");
+        navigate("/login");
+        return;
       }
-    }
-    loadDashboardData();
+
+      // Then load dashboard data
+      const storedUser = localStorage.getItem("user");
+      if (storedUser) {
+        try {
+          setUserInfo(JSON.parse(storedUser));
+        } catch (error) {
+          console.error("Error parsing user info:", error);
+          // Clear corrupted data
+          localStorage.removeItem("user");
+        }
+      }
+      loadDashboardData();
+    };
+
+    initAuthAndLoad();
   }, [navigate]);
 
   const loadDashboardData = async () => {
