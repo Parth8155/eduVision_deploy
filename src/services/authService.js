@@ -134,15 +134,40 @@ const authService = {
     return !!this.getAccessToken();
   },
 
+  // Check if token is expired or about to expire
+  isTokenExpired(token) {
+    try {
+      if (!token) return true;
+      const parts = token.split('.');
+      if (parts.length !== 3) return true;
+      
+      const payload = JSON.parse(atob(parts[1]));
+      if (!payload.exp) return false; // No expiry, assume valid
+      
+      const now = Math.floor(Date.now() / 1000);
+      const timeLeft = payload.exp - now;
+      
+      // Token is expired or will expire in less than 5 minutes
+      return timeLeft < 300;
+    } catch (error) {
+      console.error('Error checking token expiry:', error);
+      return true; // Assume expired on error
+    }
+  },
+
   // Initialize authentication on app startup
   async initializeAuth() {
     const token = this.getAccessToken();
-    if (token) {
-      try {
-        // Try to refresh the token to verify it's still valid
+    if (!token) {
+      return false;
+    }
+
+    try {
+      // Check if token is expired or about to expire
+      if (this.isTokenExpired(token)) {
+        // Token expired, try to refresh
         const newToken = await this.refreshToken();
         if (newToken) {
-          // Token refreshed successfully, setup auto-refresh
           this.setupTokenRefresh();
           return true;
         } else {
@@ -150,14 +175,21 @@ const authService = {
           this.clearAuthData();
           return false;
         }
-      } catch (error) {
-        console.error('Token refresh failed on initialization:', error);
-        // Clear stored data if refresh fails
+      } else {
+        // Token is still valid, just setup auto-refresh
+        this.setupTokenRefresh();
+        return true;
+      }
+    } catch (error) {
+      console.error('Token validation failed on initialization:', error);
+      // Only clear if token is actually expired
+      if (this.isTokenExpired(token)) {
         this.clearAuthData();
         return false;
       }
+      // If token not expired but some other error, keep it and try to continue
+      return true;
     }
-    return false;
   },
 
   // Clear authentication data
