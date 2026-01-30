@@ -41,6 +41,7 @@ function ReactPDFViewerNew(props) {
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
   const viewerRef = useRef(null);
+  const zoomTimeoutRef = useRef(null);
 
   // Undo / redo stacks (snapshots of highlights array)
   const undoStackRef = useRef([]);
@@ -816,6 +817,58 @@ function ReactPDFViewerNew(props) {
       el.removeEventListener("mouseover", onMouseMove);
     };
   }, [tool, onCreateNumberAnnotation]);
+
+  // Add smooth zoom support for trackpad pinch gestures
+  useEffect(() => {
+    const el = viewerRef.current;
+    if (!el) return;
+
+    let lastScale = 1;
+    let currentZoom = 1;
+
+    const handleWheel = (e) => {
+      // Detect pinch-to-zoom gesture (ctrlKey is set on pinch gestures)
+      if (e.ctrlKey || e.metaKey) {
+        e.preventDefault();
+        e.stopPropagation();
+
+        // Clear any pending zoom timeout
+        if (zoomTimeoutRef.current) {
+          clearTimeout(zoomTimeoutRef.current);
+        }
+
+        // Calculate zoom delta with smooth scaling
+        const delta = -e.deltaY;
+        const zoomSpeed = 0.002; // Adjust for smoother zoom
+        const zoomDelta = delta * zoomSpeed;
+
+        currentZoom = Math.max(0.5, Math.min(3, currentZoom + zoomDelta));
+
+        // Apply zoom transformation smoothly
+        const viewer = el.querySelector('.rpv-core__viewer');
+        if (viewer) {
+          viewer.style.transition = 'transform 0.1s ease-out';
+          viewer.style.transform = `scale(${currentZoom})`;
+          viewer.style.transformOrigin = 'center center';
+        }
+
+        // Debounce the final zoom level update
+        zoomTimeoutRef.current = setTimeout(() => {
+          lastScale = currentZoom;
+        }, 150);
+      }
+    };
+
+    // Add passive: false to allow preventDefault
+    el.addEventListener('wheel', handleWheel, { passive: false });
+
+    return () => {
+      el.removeEventListener('wheel', handleWheel);
+      if (zoomTimeoutRef.current) {
+        clearTimeout(zoomTimeoutRef.current);
+      }
+    };
+  }, []);
 
   if (!pdfUrl) {
     return (

@@ -441,3 +441,25 @@
     transform: scale(1.02);
     z-index: 15;
 }
+
+/* Smooth zoom support for trackpad gestures */
+.rpv-core__viewer {
+    transition: transform 0.1s ease-out;
+    will-change: transform;
+}
+
+.edu-pdf-viewer {
+    touch-action: pan-x pan-y pinch-zoom;
+}
+
+/* Prevent text selection during pinch-to-zoom */
+.edu-pdf-viewer.zooming {
+    user-select: none;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+}
+
+/* Smooth scaling for PDF pages during zoom */
+.rpv-core__page-layer {
+    transition: transform 0.1s ease-out;
+}
